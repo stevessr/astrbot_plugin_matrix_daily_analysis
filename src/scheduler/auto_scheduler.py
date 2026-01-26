@@ -705,7 +705,7 @@ class AutoScheduler:
                         continue
 
                     try:
-                        logger.info(f"尝试使用 Matrix 平台发送图片...")
+                        logger.info("尝试使用 Matrix 平台发送图片...")
                         if hasattr(test_bot_instance, "api") and hasattr(test_bot_instance.api, "upload_file"):
                             upload_resp = await test_bot_instance.api.upload_file(image_bytes, "image/png", "report.png")
                             content_uri = upload_resp.get("content_uri")
@@ -726,7 +726,7 @@ class AutoScheduler:
                                         "url": content_uri
                                     }
                                     )
-                                    logger.info(f"✅ Matrix 图片发送成功")
+                                    logger.info("✅ Matrix 图片发送成功")
                                     return True
                     except Exception as e:
                             logger.error(f"Matrix 图片发送失败: {e}")
@@ -772,7 +772,7 @@ class AutoScheduler:
                         message_type="m.room.message",
                         content={"msgtype": "m.text", "body": text_content}
                     )
-                    logger.info(f"✅ Matrix 文本发送成功")
+                    logger.info("✅ Matrix 文本发送成功")
                     return True
                 except Exception as e:
                     logger.error(f"Matrix 文本发送失败: {e}")
@@ -835,7 +835,7 @@ class AutoScheduler:
                                     "info": {"mimetype": "application/pdf"}
                                 }
                                 )
-                                logger.info(f"✅ Matrix PDF发送成功")
+                                logger.info("✅ Matrix PDF发送成功")
                                 return True
                 except Exception as e:
                         logger.error(f"Matrix PDF发送失败: {e}")

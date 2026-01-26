@@ -4,11 +4,8 @@
 """
 
 import asyncio
-import base64
 from datetime import datetime
 from pathlib import Path
-
-import aiohttp
 
 from astrbot.api import logger
 
