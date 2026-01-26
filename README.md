@@ -5,100 +5,97 @@
 [![AstrBot](https://img.shields.io/badge/AstrBot-Plugin-ff69b4?style=for-the-badge)](https://github.com/AstrBotDevs/AstrBot)
 [![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
 
-_✨ 一个基于 AstrBot 的智能群聊分析插件，能够生成精美的日常分析报告。专为 Matrix 平台适配。 ✨_
+_✨ 基于 AstrBot 的 Matrix 群聊日常分析插件，生成结构化统计与精美报告。 ✨_
 
 </div>
 
-## 功能特色
+## 功能概览
 
 ### 🎯 智能分析
-- **统计数据**: 全面的群聊活跃度和参与度统计
-- **话题分析**: 使用 LLM 智能提取群聊中的热门话题和讨论要点
-- **用户画像**: 基于聊天行为分析用户特征，分配个性化称号
-- **圣经识别**: 自动筛选出群聊中的精彩发言
+- **统计数据**：消息数、活跃人数、表情与时间分布等
+- **话题分析**：基于 LLM 提取核心话题与总结
+- **用户称号**：按聊天行为生成称号与画像
+- **金句提取**：精选代表性发言与理由
 
-### 📊 可视化报告
-- **多种格式**: 支持图片和文本输出格式
-    - **精美图片**: 生成美观的可视化报告
-    - **PDF 报告**: 生成专业的 PDF 格式分析报告（需配置）
-- **详细数据**: 包含消息统计、时间分布、关键词、金句等
+### 📊 报告输出
+- **image**：渲染图片报告（推荐）
+- **text**：文本报告
+- **pdf**：PDF 报告（需安装 Playwright）
 
-### 🛠️ 灵活配置
-- **群组管理**: 支持指定特定群组启用功能
-- **参数调节**: 可自定义分析天数、消息数量等参数
-- **定时任务**: 支持设置每日自动分析时间
-- **自定义 LLM 服务** ：支持自定义指定的 LLM 服务
+### ⚙️ 自动化与模板
+- **定时自动分析**：按日计划执行
+- **并发控制**：避免 LLM 请求过载
+- **模板切换**：多套模板可选，支持预览
 
-## 配置选项
+> Matrix-only：本插件仅支持 Matrix 平台。
 
-> [!NOTE]
-> 以下配置情况仅供参考，请仔细阅读插件配置页面中各个字段的说明，以插件配置中的说明为准。
+## 配置结构（按用途分组）
 
-| 配置项 | 说明 | 备注 |
-|--------|------|--------|
-| 启用自动分析 | 启用定时触发自动分析功能需要按照插件配置里面的说明填写相关的需要的字段；简略说明：打开自动分析功能，在群聊列表中添加群号或者使用 `/分析设置 enable` 启用当前群聊 | 默认关闭，需要填写机器人 Matrix User ID (MXID) |
-| PDF 格式的报告 | 初次使用需要使用 `/安装PDF` 命令安装依赖，首次使用命令安装，最后出现提示告诉你需要重启生效，是对的，需要重启 astrbot，而不是热重载插件。 | 输出格式需要设置为 PDF |
-| 自定义 LLM 服务 | 插件配置中允许用户自行选取个人提供的 Astrbot 服务商列表中的大语言模型服务商 | 留空则回退到用户 Astrbot 现有服务商中第一个可用服务商 |
+配置已按用途分组（仅列关键项）：
 
-> [!IMPORTANT]
-> **PDF 功能配置**：使用 `/安装PDF` 命令后，需要完全重启 AstrBot 才能生效，热重载插件无效！
-> PDF 报告将自动保存在插件数据目录的 `reports` 文件夹中。
+- `group_access`：群聊权限
+  - `mode`（whitelist/blacklist/none）
+  - `list`
+- `auto_analysis`：自动分析
+  - `enabled` / `time` / `bot_matrix_ids`
+- `analysis`：分析参数
+  - `days` / `max_messages` / `min_messages_threshold` / `max_concurrent_tasks`
+  - `topic` / `user_title` / `golden_quote`（含 enabled / max_* / max_tokens / provider_id / prompts）
+- `llm`：通用 LLM 设置
+  - `provider_id` / `timeout` / `retries` / `backoff`
+- `output`：输出设置
+  - `format`（image/text/pdf）
+  - `template`
+  - `pdf.filename_format` / `pdf.browser_path`
 
-> [!TIP]
-> **自定义 LLM 服务**：新版本弃用此前硬编码的 provider 提供方式，采用更符合 Astrbot 生态的更用户友好的配置方式，根据配置键选取 Provider，支持多级回退：
->    1. 尝试从配置获取指定的 provider_id（如 topic_provider_id）
->    2. 回退到主 LLM provider_id（llm_provider_id）
->    3. 回退到当前会话的 Provider（通过 umo）
->    4. 回退到第一个可用的 Provider
+> PDF 报告固定保存在插件数据目录的 `reports` 下，不支持自定义输出目录。
 
 ## 使用方法
 
-### 基础命令
-
-#### 群分析
+### 群分析
 ```
 /群分析 [天数]
 ```
-- 分析群聊近期活动
-- 天数可选，默认为 1 天
-- 例如：`/群分析 3` 分析最近 3 天的群聊
+- 默认 1 天，可指定 1-7 天
 
-#### 分析设置
+### 分析设置
 ```
-/分析设置 [操作]
+/分析设置 [enable|disable|status|reload|test]
 ```
-- `enable`: 为当前群启用分析功能
-- `disable`: 为当前群禁用分析功能
-- `status`: 查看当前群的启用状态
-- 例如：`/分析设置 enable`
+- `enable` / `disable`：启用或禁用当前房间
+- `status`：查看状态
+- `reload`：重载配置并重启定时任务
+- `test`：测试自动分析
 
-#### 模板设置
+### 输出格式
+```
+/设置格式 [image|text|pdf]
+```
+
+### 模板
 ```
 /查看模板
 /设置模板 [模板名称或序号]
 ```
-- `/查看模板`: 查看所有可用模板及预览图
-- `/设置模板`: 查看当前模板和可用模板列表
-- `/设置模板 [序号]`: 切换到指定序号的模板
-- 例如：`/设置模板 1` 或 `/设置模板 scrapbook`
 
-## 安装要求
+### PDF 依赖安装
+```
+/安装 PDF
+```
+> 安装完成后需完全重启 AstrBot。
 
-> [!CAUTION]
-> **必需条件**：
-> - 已配置 LLM 提供商（用于智能分析）
-> - Matrix 平台适配器 (astrbot_plugin_matrix_adapter)
+## 依赖要求
+
+- 已配置可用的 LLM Provider
+- 已安装 Matrix 适配器：`astrbot_plugin_matrix_adapter`
 
 ## 注意事项
 
-> [!WARNING]
-> 1. **性能考虑**: 大量消息分析可能消耗较多 LLM tokens
-> 2. **数据准确性**: 分析结果基于可获取的群聊记录，可能不完全准确
-> 3. **图片发送**: Matrix 平台发送图片需要先上传，插件会自动处理，但需要网络畅通
+- 大量消息会增加 LLM Token 消耗
+- Matrix 发送图片/文件需要先上传，网络不畅会影响发送
+- 图片发送失败会进入重试队列，失败后回退文本
 
 ## 贡献
-
-### 贡献指南
 
 <div align="center">
 
@@ -108,21 +105,17 @@ _✨ 一个基于 AstrBot 的智能群聊分析插件，能够生成精美的日
 
 ### 开发环境设置
 
-为了保持代码质量，本项目使用 [pre-commit](https://pre-commit.com/) 钩子进行代码规范检查和自动修复。所有的贡献代码都必须通过 pre-commit 检查。
-
-#### 1. 安装 pre-commit
+1. 安装 pre-commit
 ```bash
 pip install pre-commit
 ```
 
-#### 2. 安装 git hook
-在项目根目录下运行，这将确保在每次提交时自动运行检查：
+2. 安装 git hook
 ```bash
 pre-commit install
 ```
 
-#### 3. 手动运行检查
-如果需要手动触发所有文件的检查（推荐在提交前运行一次）：
+3. 手动运行检查
 ```bash
 pre-commit run --all-files
 ```
