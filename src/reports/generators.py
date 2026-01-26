@@ -127,7 +127,7 @@ class ReportGenerator:
         """生成 PDF 格式的分析报告"""
         try:
             # 确保输出目录存在（使用 asyncio.to_thread 避免阻塞）
-            output_dir = Path(self.config_manager.get_pdf_output_dir())
+            output_dir = Path(self.config_manager.get_reports_dir())
             await asyncio.to_thread(output_dir.mkdir, parents=True, exist_ok=True)
 
             # 生成文件名

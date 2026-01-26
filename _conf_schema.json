@@ -179,12 +179,6 @@
         "default": "",
         "hint": "专门用于金句分析的 Provider。留空则使用主 LLM Provider"
     },
-    "pdf_output_dir": {
-        "type": "string",
-        "description": "PDF 输出目录",
-        "default": "data/plugins/astrbot_plugin_matrix_daily_analysis/reports",
-        "hint": "PDF 报告文件的保存目录"
-    },
     "browser_path": {
         "type": "string",
         "description": "自定义浏览器路径",

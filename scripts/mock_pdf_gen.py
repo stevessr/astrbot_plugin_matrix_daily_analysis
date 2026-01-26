@@ -43,10 +43,6 @@ class MockConfig:
     def get(self, key, default=None):
         return default
 
-    def get_pdf_output_dir(self):
-        # Output to the scripts directory for easy access
-        return os.path.join(current_dir, "output")
-
     def get_pdf_filename_format(self):
         return "mock_report_{group_id}_{date}.pdf"
 
@@ -67,12 +63,18 @@ class MockConfig:
         return ""
 
 
+class MockConfigManager(ConfigManager):
+    def get_reports_dir(self) -> str:
+        # Output to the scripts directory for easy access
+        return os.path.join(current_dir, "output")
+
+
 # ==========================================
 # 3. Main Execution
 # ==========================================
 async def main():
     print("Initializing ReportGenerator...")
-    config_manager = ConfigManager(MockConfig())
+    config_manager = MockConfigManager(MockConfig())
     generator = ReportGenerator(config_manager)
 
     # Mock Data (Rich data to test layout)

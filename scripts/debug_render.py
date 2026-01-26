@@ -47,7 +47,7 @@ class MockConfigManager:
     def get_max_golden_quotes(self) -> int:
         return 5
 
-    def get_pdf_output_dir(self) -> str:
+    def get_reports_dir(self) -> str:
         return "data/pdf"
 
     def get_pdf_filename_format(self) -> str:

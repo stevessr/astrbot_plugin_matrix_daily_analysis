@@ -138,8 +138,8 @@ class ConfigManager:
         """获取金句分析专用 Provider ID"""
         return self.config.get("golden_quote_provider_id", "")
 
-    def get_pdf_output_dir(self) -> str:
-        """获取 PDF 输出目录"""
+    def get_reports_dir(self) -> str:
+        """获取报告输出目录（固定为插件数据目录）"""
         try:
             plugin_name = "astrbot_plugin_matrix_daily_analysis"
             data_path = get_astrbot_data_path()

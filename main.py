@@ -10,11 +10,7 @@ import asyncio
 from astrbot.api import AstrBotConfig, logger
 from astrbot.api.event import AstrMessageEvent, filter
 from astrbot.api.star import Context, Star
-from astrbot.core.message.components import File
 
-# from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import (
-#    AiocqhttpMessageEvent,
-# )
 from astrbot.core.star.filter.permission import PermissionType
 
 from .src.core.bot_manager import BotManager
@@ -125,8 +121,8 @@ class matrixGroupDailyAnalysis(Star):
         用法：/群分析 [天数]
         """
         platform_name = event.get_platform_name()
-        if platform_name not in ["aiocqhttp", "matrix"]:
-            yield event.plain_result("❌ 此功能仅支持 matrix 群聊或 Matrix 房间")
+        if platform_name != "matrix":
+            yield event.plain_result("❌ 此功能仅支持 Matrix 群聊/房间")
             return
 
         group_id = event.session.session_id
@@ -205,42 +201,36 @@ class matrixGroupDailyAnalysis(Star):
                     analysis_result, group_id, self.html_render
                 )
                 if image_url:
-                    # 尝试直接发送图片，而不是 yield result，以便捕获发送过程中的超时错误
+                    # Matrix 平台发送图片（上传后发送）
                     try:
                         logger.info(f"正在尝试发送图片报告：{image_url}")
-
-                        # 构建消息链
-                        message_chain = [{"type": "image", "data": {"file": image_url}}]
-
-                        # 尝试通过 standardized API 发送
-                        if hasattr(bot_instance, "api") and hasattr(
-                            bot_instance.api, "call_action"
-                        ):
-                            await bot_instance.api.call_action(
-                                "send_group_msg",
-                                group_id=int(group_id),
-                                message=message_chain,
+                        sent = await self.auto_scheduler._send_image_message(
+                            group_id, image_url
+                        )
+                        if sent:
+                            logger.info(f"图片报告发送成功：{group_id}")
+                        elif html_content:
+                            yield event.plain_result(
+                                "[AstrBot matrix 群日常分析总结插件] ⚠️ 图片报告发送失败，已加入重试队列。"
                             )
-                        # 尝试通过 AstrBot 抽象接口发送
-                        elif hasattr(bot_instance, "send_msg"):
-                            await bot_instance.send_msg(image_url, group_id=group_id)
+                            platform_id = (
+                                await self.auto_scheduler.get_platform_id_for_group(
+                                    group_id
+                                )
+                            )
+                            await self.retry_manager.add_task(
+                                html_content, analysis_result, group_id, platform_id
+                            )
                         else:
-                            # 无法手动发送，回退到 yield
-                            yield event.image_result(image_url)
-                            return
-
-                        # 发送成功，不做额外操作
-                        logger.info(f"图片报告发送成功：{group_id}")
-
+                            yield event.plain_result(
+                                "❌ 图片发送失败，且无法进行重试（无 HTML 内容）。"
+                            )
                     except Exception as send_err:
-                        logger.error(f"图片报告发送失败 (可能是网络超时): {send_err}")
-
-                        # 发送失败，加入重试队列
+                        logger.error(f"图片报告发送失败：{send_err}")
                         if html_content:
                             yield event.plain_result(
-                                "[AstrBot matrix 群日常分析总结插件] ⚠️ 图片报告发送超时，已加入重试队列（将尝试 Base64 编码发送）。"
+                                "[AstrBot matrix 群日常分析总结插件] ⚠️ 图片报告发送异常，已加入重试队列。"
                             )
-                            # 获取 platform_id
                             platform_id = (
                                 await self.auto_scheduler.get_platform_id_for_group(
                                     group_id
@@ -287,13 +277,15 @@ class matrixGroupDailyAnalysis(Star):
                     analysis_result, group_id
                 )
                 if pdf_path:
-                    # 发送 PDF 文件
-                    from pathlib import Path
-
-                    pdf_file = File(name=Path(pdf_path).name, file=pdf_path)
-                    result = event.make_result()
-                    result.chain.append(pdf_file)
-                    yield result
+                    sent = await self.auto_scheduler._send_pdf_file(group_id, pdf_path)
+                    if not sent:
+                        logger.warning("PDF 发送失败，回退到文本报告")
+                        text_report = self.report_generator.generate_text_report(
+                            analysis_result
+                        )
+                        yield event.plain_result(
+                            f"\n📝 以下是文本版本的分析报告：\n\n{text_report}"
+                        )
                 else:
                     # 如果 PDF 生成失败，提供详细的错误信息和解决方案
                     # yield event.plain_result("❌ PDF 报告生成失败")
@@ -332,8 +324,8 @@ class matrixGroupDailyAnalysis(Star):
         用法：/设置格式 [image|text|pdf]
         """
         platform_name = event.get_platform_name()
-        if platform_name not in ["aiocqhttp", "matrix"]:
-            yield event.plain_result("❌ 此功能仅支持 matrix 群聊或 Matrix 房间")
+        if platform_name != "matrix":
+            yield event.plain_result("❌ 此功能仅支持 Matrix 群聊/房间")
             return
 
         group_id = event.session.session_id
@@ -380,8 +372,8 @@ class matrixGroupDailyAnalysis(Star):
         用法：/设置模板 [模板名称或序号]
         """
         platform_name = event.get_platform_name()
-        if platform_name not in ["aiocqhttp", "matrix"]:
-            yield event.plain_result("❌ 此功能仅支持 matrix 群聊或 Matrix 房间")
+        if platform_name != "matrix":
+            yield event.plain_result("❌ 此功能仅支持 Matrix 群聊/房间")
             return
 
         import os
@@ -450,8 +442,8 @@ class matrixGroupDailyAnalysis(Star):
         用法：/查看模板
         """
         platform_name = event.get_platform_name()
-        if platform_name not in ["aiocqhttp", "matrix"]:
-            yield event.plain_result("❌ 此功能仅支持 matrix 群聊或 Matrix 房间")
+        if platform_name != "matrix":
+            yield event.plain_result("❌ 此功能仅支持 Matrix 群聊/房间")
             return
 
         import os
@@ -537,8 +529,8 @@ class matrixGroupDailyAnalysis(Star):
         用法：/安装 PDF
         """
         platform_name = event.get_platform_name()
-        if platform_name not in ["aiocqhttp", "matrix"]:
-            yield event.plain_result("❌ 此功能仅支持 matrix 群聊或 Matrix 房间")
+        if platform_name != "matrix":
+            yield event.plain_result("❌ 此功能仅支持 Matrix 群聊/房间")
             return
 
         yield event.plain_result("🔄 开始安装 PDF 功能依赖，请稍候...")
@@ -567,8 +559,8 @@ class matrixGroupDailyAnalysis(Star):
         - test: 测试自动分析功能
         """
         platform_name = event.get_platform_name()
-        if platform_name not in ["aiocqhttp", "matrix"]:
-            yield event.plain_result("❌ 此功能仅支持 matrix 群聊或 Matrix 房间")
+        if platform_name != "matrix":
+            yield event.plain_result("❌ 此功能仅支持 Matrix 群聊/房间")
             return
 
         group_id = event.session.session_id
