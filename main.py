@@ -448,8 +448,6 @@ class matrixGroupDailyAnalysis(Star):
 
         import os
 
-        from astrbot.api.message_components import Image, Node, Nodes, Plain
-
         # 获取模板目录
         template_dir = os.path.join(
             os.path.dirname(__file__), "src", "reports", "templates"
@@ -478,23 +476,12 @@ class matrixGroupDailyAnalysis(Star):
         # 获取当前使用的模板
         current_template = self.config_manager.get_report_template()
 
-        # 获取机器人信息用于合并转发消息
-        bot_id = event.get_self_id()
-        bot_name = "模板预览"
-
         # 圆圈数字序号
         circle_numbers = ["①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧", "⑨", "⑩"]
 
-        # 构建合并转发消息节点列表
-        node_list = []
-
-        # 添加标题节点
-        header_content = [
-            Plain(
-                f"🎨 可用报告模板列表\n📌 当前使用：{current_template}\n💡 使用 /设置模板 [序号] 切换"
-            )
-        ]
-        node_list.append(Node(uin=bot_id, name=bot_name, content=header_content))
+        yield event.plain_result(
+            f"🎨 可用报告模板列表\n📌 当前使用：{current_template}\n💡 使用 /设置模板 [序号] 切换"
+        )
 
         # 为每个模板创建一个节点
         for index, template_name in enumerate(available_templates):
@@ -508,18 +495,13 @@ class matrixGroupDailyAnalysis(Star):
                 else f"({index + 1})"
             )
 
-            # 构建节点内容
-            node_content = [Plain(f"{num_label} {template_name}{current_mark}")]
+            # 发送模板名称
+            yield event.plain_result(f"{num_label} {template_name}{current_mark}")
 
             # 添加预览图
             preview_image_path = os.path.join(assets_dir, f"{template_name}-demo.jpg")
             if os.path.exists(preview_image_path):
-                node_content.append(Image.fromFileSystem(preview_image_path))
-
-            node_list.append(Node(uin=bot_id, name=template_name, content=node_content))
-
-        # 使用 Nodes 包装成一个合并转发消息
-        yield event.chain_result([Nodes(node_list)])
+                yield event.image_result(preview_image_path)
 
     @filter.command("安装 PDF")
     @filter.permission_type(PermissionType.ADMIN)

@@ -192,7 +192,7 @@ class UserTitleAnalyzer(BaseAnalyzer):
                 user_summaries.append(
                     {
                         "name": stats["nickname"],
-                        "matrix": int(user_id),
+                        "matrix": str(user_id),
                         "message_count": stats["message_count"],
                         "avg_chars": round(avg_chars, 1),
                         "emoji_ratio": round(

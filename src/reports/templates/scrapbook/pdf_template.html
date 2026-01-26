@@ -470,7 +470,7 @@
             align-items: flex-start;
         }
 
-        .user-card {
+        .user-panel {
             width: 49%;
             /* Slightly wider to fill the narrower container */
             break-inside: avoid;
@@ -492,13 +492,13 @@
             /* background-image: url("data:image/svg+xml,..."); REMOVED */
         }
 
-        .user-card:hover {
+        .user-panel:hover {
             transform: translateY(-4px) rotate(1deg);
             z-index: 5;
             box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.15), 8px 8px 0 2px var(--ink-primary);
         }
 
-        .card-tape {
+        .panel-tape {
             position: absolute;
             top: -12px;
             left: 50%;
@@ -516,12 +516,12 @@
             border-right: 2px dashed rgba(255, 255, 255, 0.3);
         }
 
-        .user-card:nth-child(2n) .card-tape {
+        .user-panel:nth-child(2n) .panel-tape {
             background-color: var(--color-pink);
             transform: translateX(-50%) rotate(3deg);
         }
 
-        .user-card:nth-child(3n) .card-tape {
+        .user-panel:nth-child(3n) .panel-tape {
             background-color: var(--color-green);
             transform: translateX(-50%) rotate(-1deg);
         }

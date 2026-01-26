@@ -58,7 +58,7 @@ class MockConfigManager:
 async def mock_get_user_avatar(user_id: int) -> str:
     # Return a placeholder or a real base64 if needed
     # For debugging, a simple colored square or a known avatar is fine
-    return "https://q4.qlogo.cn/headimg_dl?dst_uin=123456789&spec=640"
+    return "https://example.com/avatar.png"
 
 
 async def debug_render(

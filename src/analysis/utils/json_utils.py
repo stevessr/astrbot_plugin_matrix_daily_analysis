@@ -192,27 +192,42 @@ def extract_user_titles_with_regex(result_text: str, max_count: int) -> list[dic
     try:
         titles = []
 
-        # 正则模式：匹配完整的用户称号对象
-        pattern = r'\{\s*"name":\s*"([^"]+)"\s*,\s*"matrix":\s*(\d+)\s*,\s*"title":\s*"([^"]+)"\s*,\s*"mbti":\s*"([^"]+)"\s*,\s*"reason":\s*"([^"]*(?:\\.[^"]*)*)"\s*\}'
-        matches = re.findall(pattern, result_text, re.DOTALL)
+        # 正则模式：匹配完整的用户称号对象（matrix 支持字符串或数字）
+        pattern = (
+            r'\{\s*"name"\s*:\s*"(?P<name>[^"]+)"\s*,\s*"matrix"\s*:\s*'
+            r'(?P<matrix>"[^"]+"|\d+)\s*,\s*"title"\s*:\s*"(?P<title>[^"]+)"\s*,\s*'
+            r'"mbti"\s*:\s*"(?P<mbti>[^"]+)"\s*,\s*"reason"\s*:\s*"(?P<reason>[^"]*(?:\\.[^"]*)*)"\s*\}'
+        )
+        matches = list(re.finditer(pattern, result_text, re.DOTALL))
 
         if not matches:
             # 尝试更宽松的匹配（字段顺序可变）
-            pattern = r'"name":\s*"([^"]+)"[^}]*"matrix":\s*(\d+)[^}]*"title":\s*"([^"]+)"[^}]*"mbti":\s*"([^"]+)"[^}]*"reason":\s*"([^"]*(?:\\.[^"]*)*)"'
-            matches = re.findall(pattern, result_text, re.DOTALL)
+            pattern = (
+                r'"name"\s*:\s*"(?P<name>[^"]+)"[^}]*"matrix"\s*:\s*'
+                r'(?P<matrix>"[^"]+"|\d+)[^}]*"title"\s*:\s*"(?P<title>[^"]+)"[^}]*'
+                r'"mbti"\s*:\s*"(?P<mbti>[^"]+)"[^}]*"reason"\s*:\s*"(?P<reason>[^"]*(?:\\.[^"]*)*)"'
+            )
+            matches = list(re.finditer(pattern, result_text, re.DOTALL))
 
         for match in matches[:max_count]:
-            name = match[0].strip()
-            matrix = int(match[1])
-            title = match[2].strip()
-            mbti = match[3].strip()
-            reason = match[4].strip()
+            name = match.group("name").strip()
+            matrix_raw = match.group("matrix").strip()
+            matrix = matrix_raw.strip('"')
+            title = match.group("title").strip()
+            mbti = match.group("mbti").strip()
+            reason = match.group("reason").strip()
 
             # 清理转义字符
             reason = reason.replace('\\"', '"').replace("\\n", " ").replace("\\t", " ")
 
             titles.append(
-                {"name": name, "matrix": matrix, "title": title, "mbti": mbti, "reason": reason}
+                {
+                    "name": name,
+                    "matrix": matrix,
+                    "title": title,
+                    "mbti": mbti,
+                    "reason": reason,
+                }
             )
 
         logger.info(f"用户称号正则表达式提取成功，提取到 {len(titles)} 条有效用户称号")
