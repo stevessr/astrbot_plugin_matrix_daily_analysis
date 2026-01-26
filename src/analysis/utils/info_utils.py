@@ -4,10 +4,10 @@ class InfoUtils:
         """
         获取用户昵称
 
-        优先使用 nickname 字段，如果为空则使用 card(群名片) 字段
+        Matrix 平台仅使用昵称/显示名字段
         """
-        enable_user_card = config_manager.get_enable_user_card()
-        if enable_user_card:
-            return sender.get("card", "") or sender.get("nickname", "")
-        else:
-            return sender.get("nickname", "") or sender.get("card", "")
+        return (
+            sender.get("nickname", "")
+            or sender.get("displayname", "")
+            or sender.get("user_id", "")
+        )

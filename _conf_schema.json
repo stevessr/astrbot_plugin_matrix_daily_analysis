@@ -54,12 +54,6 @@
             "type": "string"
         }
     },
-    "enable_user_card": {
-        "type": "bool",
-        "description": "使用用户群名片",
-        "default": false,
-        "hint": "在分析中优先使用用户的群名片作为昵称显示"
-    },
     "output_format": {
         "type": "string",
         "description": "输出格式",

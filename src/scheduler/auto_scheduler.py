@@ -56,54 +56,18 @@ class AutoScheduler:
                 hasattr(self.bot_manager, "_bot_instances")
                 and self.bot_manager._bot_instances
             ):
-                # 如果只有一个实例，直接返回
+                if "matrix" in self.bot_manager._bot_instances:
+                    logger.debug("使用 Matrix 平台实例")
+                    return "matrix"
+
+                # 如果只有一个实例，直接返回（保底）
                 if len(self.bot_manager._bot_instances) == 1:
                     platform_id = list(self.bot_manager._bot_instances.keys())[0]
                     logger.debug(f"只有一个适配器，使用平台：{platform_id}")
                     return platform_id
 
-                # 如果有多个实例，尝试通过 API 检查群属于哪个适配器
-                logger.info(f"检测到多个适配器，正在验证群 {group_id} 属于哪个平台...")
-                for (
-                    platform_id,
-                    bot_instance,
-                ) in self.bot_manager._bot_instances.items():
-                    try:
-                        # 尝试调用 get_group_info 来验证群是否存在
-                        if hasattr(bot_instance, "call_action"):
-                            result = await bot_instance.call_action(
-                                "get_group_info", group_id=int(group_id)
-                            )
-                            if result and result.get("group_id"):
-                                logger.info(f"✅ 群 {group_id} 属于平台 {platform_id}")
-                                return platform_id
-                            else:
-                                logger.debug(
-                                    f"平台 {platform_id} 返回了无效结果：{result}"
-                                )
-                        else:
-                            logger.debug(
-                                f"平台 {platform_id} 的 bot 实例没有 call_action 方法"
-                            )
-                    except Exception as e:
-                        # 检查是否是特定的错误码（1200 表示不在该群）
-                        error_msg = str(e)
-                        if (
-                            "retcode=1200" in error_msg
-                            or "消息 undefined 不存在" in error_msg
-                        ):
-                            logger.debug(
-                                f"平台 {platform_id} 确认群 {group_id} 不存在：{e}"
-                            )
-                        else:
-                            logger.debug(
-                                f"平台 {platform_id} 无法获取群 {group_id} 信息：{e}"
-                            )
-                        continue
-
-                # 如果所有适配器都尝试失败，记录错误并返回 None
                 logger.error(
-                    f"❌ 无法确定群 {group_id} 属于哪个平台 (已尝试：{list(self.bot_manager._bot_instances.keys())})"
+                    f"❌ 未找到 Matrix 平台实例 (已注册：{list(self.bot_manager._bot_instances.keys())})"
                 )
                 return None
 

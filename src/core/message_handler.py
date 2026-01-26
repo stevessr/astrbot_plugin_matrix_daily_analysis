@@ -148,8 +148,7 @@ class MessageHandler:
                         "time": ts / 1000,
                         "sender": {
                             "user_id": sender,
-                            "nickname": nickname,
-                            "card": nickname
+                            "nickname": nickname
                         },
                         "message": []
                     }
