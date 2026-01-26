@@ -701,7 +701,7 @@ class AstrBotMessage:
     message_id: str  # 消息id
     group_id: str = "" # 群组id，如果为私聊，则为空
     sender: MessageMember  # 发送者
-    message: List[BaseMessageComponent]  # 消息链。比如 [Plain("Hello"), At(qq=123456)]
+    message: List[BaseMessageComponent]  # 消息链。比如 [Plain("Hello"), At(matrix=123456)]
     message_str: str  # 最直观的纯文本消息字符串，将消息链中的 Plain 消息（文本消息）连接起来
     raw_message: object
     timestamp: int  # 消息时间戳
@@ -726,7 +726,7 @@ class AstrBotMessage:
 
 大多数消息平台都支持上面的消息段类型。
 
-此外，OneBot v11 平台（QQ 个人号等）还支持以下较为常见的消息段类型：
+此外，OneBot v11 平台（matrix 个人号等）还支持以下较为常见的消息段类型：
 
 - `Face`：表情消息段
 - `Node`：合并转发消息中的一个节点
@@ -873,13 +873,13 @@ async def on_private_message(self, event: AstrMessageEvent):
 #### 消息平台
 
 ```python
-@filter.platform_adapter_type(filter.PlatformAdapterType.AIOCQHTTP | filter.PlatformAdapterType.QQOFFICIAL)
+@filter.platform_adapter_type(filter.PlatformAdapterType.AIOCQHTTP | filter.PlatformAdapterType.matrixOFFICIAL)
 async def on_aiocqhttp(self, event: AstrMessageEvent):
-    '''只接收 AIOCQHTTP 和 QQOFFICIAL 的消息'''
+    '''只接收 AIOCQHTTP 和 matrixOFFICIAL 的消息'''
     yield event.plain_result("收到了一条信息")
 ```
 
-当前版本下，`PlatformAdapterType` 有 `AIOCQHTTP`, `QQOFFICIAL`, `GEWECHAT`, `ALL`。
+当前版本下，`PlatformAdapterType` 有 `AIOCQHTTP`, `matrixOFFICIAL`, `GEWECHAT`, `ALL`。
 
 #### 管理员指令
 
@@ -1035,13 +1035,13 @@ async def test_(self, event: AstrMessageEvent):
     # platform.get_client().api.call_action()
 ```
 
-## 调用 QQ 协议端 API
+## 调用 matrix 协议端 API
 
 ```py
 @filter.command("helloworld")
 async def helloworld(self, event: AstrMessageEvent):
     if event.get_platform_name() == "aiocqhttp":
-        # qq
+        # matrix
         from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import AiocqhttpMessageEvent
         assert isinstance(event, AiocqhttpMessageEvent)
         client = event.bot # 得到 client
@@ -1212,7 +1212,7 @@ import astrbot.api.message_components as Comp
 @filter.command("helloworld")
 async def helloworld(self, event: AstrMessageEvent):
     chain = [
-        Comp.At(qq=event.get_sender_id()), # At 消息发送者
+        Comp.At(matrix=event.get_sender_id()), # At 消息发送者
         Comp.Plain("来看这个图："),
         Comp.Image.fromURL("https://example.com/image.jpg"), # 从 URL 发送图片
         Comp.Image.fromFileSystem("path/to/image.jpg"), # 从本地文件目录发送图片
@@ -1466,7 +1466,7 @@ outline: deep
 1. 有一定的 Python 编程经验。
 2. 有一定的 Git、GitHub 使用经验。
 
-欢迎加入我们的开发者专用 QQ 群: `975206796`。
+欢迎加入我们的开发者专用 matrix 群: `975206796`。
 
 ## 环境准备
 

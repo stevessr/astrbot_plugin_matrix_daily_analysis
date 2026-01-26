@@ -149,9 +149,9 @@ class ConfigManager:
             # Fallback
             return "data/plugins/astrbot_plugin_matrix_daily_analysis/reports"
 
-    def get_bot_qq_ids(self) -> list:
-        """获取bot QQ号列表"""
-        return self.config.get("bot_qq_ids", [])
+    def get_bot_matrix_ids(self) -> list:
+        """获取bot matrix号列表"""
+        return self.config.get("bot_matrix_ids", [])
 
     def get_pdf_filename_format(self) -> str:
         """获取PDF文件名格式"""

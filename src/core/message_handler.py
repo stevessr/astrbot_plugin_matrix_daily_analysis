@@ -20,29 +20,29 @@ class MessageHandler:
         self.activity_visualizer = ActivityVisualizer()
         self.bot_manager = bot_manager
 
-    async def set_bot_qq_ids(self, bot_qq_ids):
-        """设置机器人QQ号（支持单个QQ号或QQ号列表）"""
+    async def set_bot_matrix_ids(self, bot_matrix_ids):
+        """设置机器人matrix号（支持单个matrix号或matrix号列表）"""
         try:
             if self.bot_manager:
                 # 确保传入的是列表，保持统一处理
-                if isinstance(bot_qq_ids, list):
-                    self.bot_manager.set_bot_qq_ids(bot_qq_ids)
-                elif bot_qq_ids:
-                    self.bot_manager.set_bot_qq_ids([bot_qq_ids])
-            logger.info(f"设置机器人QQ号: {bot_qq_ids}")
+                if isinstance(bot_matrix_ids, list):
+                    self.bot_manager.set_bot_matrix_ids(bot_matrix_ids)
+                elif bot_matrix_ids:
+                    self.bot_manager.set_bot_matrix_ids([bot_matrix_ids])
+            logger.info(f"设置机器人matrix号: {bot_matrix_ids}")
         except Exception as e:
-            logger.error(f"设置机器人QQ号失败: {e}")
+            logger.error(f"设置机器人matrix号失败: {e}")
 
     def set_bot_manager(self, bot_manager):
         """设置bot管理器"""
         self.bot_manager = bot_manager
 
-    def _extract_bot_qq_id_from_instance(self, bot_instance):
-        """从bot实例中提取QQ号（单个）"""
+    def _extract_bot_matrix_id_from_instance(self, bot_instance):
+        """从bot实例中提取matrix号（单个）"""
         if hasattr(bot_instance, "self_id") and bot_instance.self_id:
             return str(bot_instance.self_id)
-        elif hasattr(bot_instance, "qq") and bot_instance.qq:
-            return str(bot_instance.qq)
+        elif hasattr(bot_instance, "matrix") and bot_instance.matrix:
+            return str(bot_instance.matrix)
         elif hasattr(bot_instance, "user_id") and bot_instance.user_id:
             return str(bot_instance.user_id)
         return None
@@ -57,13 +57,13 @@ class MessageHandler:
                 logger.error(f"群 {group_id} 参数无效")
                 return []
 
-            # 确保bot_manager有QQ号列表用于过滤
-            if self.bot_manager and not self.bot_manager.has_bot_qq_id():
-                # 尝试从bot_instance提取QQ号并设置为列表
-                bot_qq_id = self._extract_bot_qq_id_from_instance(bot_instance)
-                if bot_qq_id:
-                    # 将单个QQ号转换为列表，保持统一处理
-                    self.bot_manager.set_bot_qq_ids([bot_qq_id])
+            # 确保bot_manager有matrix号列表用于过滤
+            if self.bot_manager and not self.bot_manager.has_bot_matrix_id():
+                # 尝试从bot_instance提取matrix号并设置为列表
+                bot_matrix_id = self._extract_bot_matrix_id_from_instance(bot_instance)
+                if bot_matrix_id:
+                    # 将单个matrix号转换为列表，保持统一处理
+                    self.bot_manager.set_bot_matrix_ids([bot_matrix_id])
 
             # 计算时间范围
             end_time = datetime.now()
@@ -205,7 +205,7 @@ class MessageHandler:
                     text = content.get("data", {}).get("text", "")
                     total_chars += len(text)
                 elif content.get("type") == "face":
-                    # QQ基础表情
+                    # matrix基础表情
                     emoji_statistics.face_count += 1
                     face_id = content.get("data", {}).get("id", "unknown")
                     emoji_statistics.face_details[f"face_{face_id}"] = (

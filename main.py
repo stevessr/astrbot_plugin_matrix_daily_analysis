@@ -1,5 +1,5 @@
 """
-QQ 群日常分析插件
+matrix 群日常分析插件
 基于群聊记录生成精美的日常分析报告，包含话题总结、用户画像、统计数据等
 
 重构版本 - 使用模块化架构
@@ -28,7 +28,7 @@ from .src.utils.helpers import MessageAnalyzer
 from .src.utils.pdf_utils import PDFInstaller
 
 
-class QQGroupDailyAnalysis(Star):
+class matrixGroupDailyAnalysis(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
         self.config = config
@@ -58,7 +58,7 @@ class QQGroupDailyAnalysis(Star):
         if self.config_manager.get_enable_auto_analysis():
             asyncio.create_task(self._delayed_start_scheduler())
 
-        logger.info("QQ 群日常分析插件已初始化（模块化版本）")
+        logger.info("matrix 群日常分析插件已初始化（模块化版本）")
 
     async def _delayed_start_scheduler(self):
         """延迟启动调度器，给系统时间初始化"""
@@ -92,7 +92,7 @@ class QQGroupDailyAnalysis(Star):
     async def terminate(self):
         """插件被卸载/停用时调用，清理资源"""
         try:
-            logger.info("开始清理 QQ 群日常分析插件资源...")
+            logger.info("开始清理 matrix 群日常分析插件资源...")
 
             # 停止自动调度器
             if self.auto_scheduler:
@@ -110,7 +110,7 @@ class QQGroupDailyAnalysis(Star):
             self.report_generator = None
             self.config_manager = None
 
-            logger.info("QQ 群日常分析插件资源清理完成")
+            logger.info("matrix 群日常分析插件资源清理完成")
 
         except Exception as e:
             logger.error(f"插件资源清理失败：{e}")
@@ -126,7 +126,7 @@ class QQGroupDailyAnalysis(Star):
         """
         platform_name = event.get_platform_name()
         if platform_name not in ["aiocqhttp", "matrix"]:
-            yield event.plain_result("❌ 此功能仅支持 QQ 群聊或 Matrix 房间")
+            yield event.plain_result("❌ 此功能仅支持 matrix 群聊或 Matrix 房间")
             return
 
         group_id = event.session.session_id
@@ -238,7 +238,7 @@ class QQGroupDailyAnalysis(Star):
                         # 发送失败，加入重试队列
                         if html_content:
                             yield event.plain_result(
-                                "[AstrBot QQ 群日常分析总结插件] ⚠️ 图片报告发送超时，已加入重试队列（将尝试 Base64 编码发送）。"
+                                "[AstrBot matrix 群日常分析总结插件] ⚠️ 图片报告发送超时，已加入重试队列（将尝试 Base64 编码发送）。"
                             )
                             # 获取 platform_id
                             platform_id = (
@@ -258,7 +258,7 @@ class QQGroupDailyAnalysis(Star):
                     # 生成失败但有 HTML，加入重试队列
                     logger.warning("图片报告生成失败，加入重试队列")
                     yield event.plain_result(
-                        "[AstrBot QQ 群日常分析总结插件] ⚠️ 图片报告暂无法生成，已加入重试队列，稍后将自动重试发送。"
+                        "[AstrBot matrix 群日常分析总结插件] ⚠️ 图片报告暂无法生成，已加入重试队列，稍后将自动重试发送。"
                     )
                     # 获取 platform_id
                     platform_id = await self.auto_scheduler.get_platform_id_for_group(
@@ -274,7 +274,7 @@ class QQGroupDailyAnalysis(Star):
                         analysis_result
                     )
                     yield event.plain_result(
-                        f"[AstrBot QQ 群日常分析总结插件] ⚠️ 图片报告生成失败，以下是文本版本：\n\n{text_report}"
+                        f"[AstrBot matrix 群日常分析总结插件] ⚠️ 图片报告生成失败，以下是文本版本：\n\n{text_report}"
                     )
             elif output_format == "pdf":
                 if not self.config_manager.playwright_available:
@@ -333,7 +333,7 @@ class QQGroupDailyAnalysis(Star):
         """
         platform_name = event.get_platform_name()
         if platform_name not in ["aiocqhttp", "matrix"]:
-            yield event.plain_result("❌ 此功能仅支持 QQ 群聊或 Matrix 房间")
+            yield event.plain_result("❌ 此功能仅支持 matrix 群聊或 Matrix 房间")
             return
 
         group_id = event.session.session_id
@@ -381,7 +381,7 @@ class QQGroupDailyAnalysis(Star):
         """
         platform_name = event.get_platform_name()
         if platform_name not in ["aiocqhttp", "matrix"]:
-            yield event.plain_result("❌ 此功能仅支持 QQ 群聊或 Matrix 房间")
+            yield event.plain_result("❌ 此功能仅支持 matrix 群聊或 Matrix 房间")
             return
 
         import os
@@ -451,7 +451,7 @@ class QQGroupDailyAnalysis(Star):
         """
         platform_name = event.get_platform_name()
         if platform_name not in ["aiocqhttp", "matrix"]:
-            yield event.plain_result("❌ 此功能仅支持 QQ 群聊或 Matrix 房间")
+            yield event.plain_result("❌ 此功能仅支持 matrix 群聊或 Matrix 房间")
             return
 
         import os
@@ -538,7 +538,7 @@ class QQGroupDailyAnalysis(Star):
         """
         platform_name = event.get_platform_name()
         if platform_name not in ["aiocqhttp", "matrix"]:
-            yield event.plain_result("❌ 此功能仅支持 QQ 群聊或 Matrix 房间")
+            yield event.plain_result("❌ 此功能仅支持 matrix 群聊或 Matrix 房间")
             return
 
         yield event.plain_result("🔄 开始安装 PDF 功能依赖，请稍候...")
@@ -568,7 +568,7 @@ class QQGroupDailyAnalysis(Star):
         """
         platform_name = event.get_platform_name()
         if platform_name not in ["aiocqhttp", "matrix"]:
-            yield event.plain_result("❌ 此功能仅支持 QQ 群聊或 Matrix 房间")
+            yield event.plain_result("❌ 此功能仅支持 matrix 群聊或 Matrix 房间")
             return
 
         group_id = event.session.session_id

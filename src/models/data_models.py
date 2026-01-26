@@ -20,7 +20,7 @@ class UserTitle:
     """用户称号数据结构"""
 
     name: str
-    qq: int
+    matrix: int
     title: str
     mbti: str
     reason: str
@@ -33,7 +33,7 @@ class GoldenQuote:
     content: str
     sender: str
     reason: str
-    qq: int = 0
+    matrix: int = 0
 
 
 @dataclass
@@ -49,7 +49,7 @@ class TokenUsage:
 class EmojiStatistics:
     """表情统计数据结构"""
 
-    face_count: int = 0  # QQ基础表情数量
+    face_count: int = 0  # matrix基础表情数量
     mface_count: int = 0  # 动画表情数量
     bface_count: int = 0  # 超级表情数量
     sface_count: int = 0  # 小表情数量

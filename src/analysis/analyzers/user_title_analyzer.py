@@ -54,7 +54,7 @@ class UserTitleAnalyzer(BaseAnalyzer):
         # 构建用户数据文本
         users_text = "\n".join(
             [
-                f"- {user['name']} (QQ:{user['qq']}): "
+                f"- {user['name']} (matrix:{user['matrix']}): "
                 f"发言{user['message_count']}条, 平均{user['avg_chars']}字, "
                 f"表情比例{user['emoji_ratio']}, 夜间发言比例{user['night_ratio']}, "
                 f"回复比例{user['reply_ratio']}"
@@ -109,7 +109,7 @@ class UserTitleAnalyzer(BaseAnalyzer):
             for title_data in titles_data[:max_titles]:
                 # 确保数据格式正确
                 name = title_data.get("name", "").strip()
-                qq = title_data.get("qq")
+                matrix = title_data.get("matrix")
                 title = title_data.get("title", "").strip()
                 mbti = title_data.get("mbti", "").strip()
                 reason = title_data.get("reason", "").strip()
@@ -119,15 +119,15 @@ class UserTitleAnalyzer(BaseAnalyzer):
                     logger.warning(f"用户称号数据格式不完整，跳过: {title_data}")
                     continue
 
-                # 验证QQ号格式（单个用户QQ号）
+                # 验证matrix号格式（单个用户matrix号）
                 try:
-                    qq = int(qq)
+                    matrix = int(matrix)
                 except (ValueError, TypeError):
-                    logger.warning(f"QQ号格式无效，跳过: {qq}")
+                    logger.warning(f"matrix号格式无效，跳过: {matrix}")
                     continue
 
                 titles.append(
-                    UserTitle(name=name, qq=qq, title=title, mbti=mbti, reason=reason)
+                    UserTitle(name=name, matrix=matrix, title=title, mbti=mbti, reason=reason)
                 )
 
             return titles
@@ -151,8 +151,8 @@ class UserTitleAnalyzer(BaseAnalyzer):
             准备好的用户数据字典
         """
         try:
-            # 获取机器人QQ号列表用于过滤
-            bot_qq_ids = self.config_manager.get_bot_qq_ids()
+            # 获取机器人matrix号列表用于过滤
+            bot_matrix_ids = self.config_manager.get_bot_matrix_ids()
 
             user_summaries = []
 
@@ -173,8 +173,8 @@ class UserTitleAnalyzer(BaseAnalyzer):
 
             for user_id, stats in user_analysis.items():
                 # 过滤机器人自己的消息
-                if bot_qq_ids and str(user_id) in [str(qq) for qq in bot_qq_ids]:
-                    logger.debug(f"过滤掉机器人QQ号: {user_id}")
+                if bot_matrix_ids and str(user_id) in [str(matrix) for matrix in bot_matrix_ids]:
+                    logger.debug(f"过滤掉机器人matrix号: {user_id}")
                     continue
 
                 # 只处理活跃用户
@@ -192,7 +192,7 @@ class UserTitleAnalyzer(BaseAnalyzer):
                 user_summaries.append(
                     {
                         "name": stats["nickname"],
-                        "qq": int(user_id),
+                        "matrix": int(user_id),
                         "message_count": stats["message_count"],
                         "avg_chars": round(avg_chars, 1),
                         "emoji_ratio": round(

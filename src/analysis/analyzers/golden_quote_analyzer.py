@@ -156,7 +156,7 @@ class GoldenQuoteAnalyzer(BaseAnalyzer):
                                     "sender": nickname,
                                     "time": msg_time,
                                     "content": text,
-                                    "qq": sender.get("user_id", 0),
+                                    "matrix": sender.get("user_id", 0),
                                 }
                             )
 
@@ -191,7 +191,7 @@ class GoldenQuoteAnalyzer(BaseAnalyzer):
             logger.info(f"开始从 {len(interesting_messages)} 条圣经消息中提取金句")
             quotes, usage = await self.analyze(interesting_messages, umo)
 
-            # 回填QQ号
+            # 回填matrix号
             for quote in quotes:
                 for msg in interesting_messages:
                     # 尝试匹配内容和发送者
@@ -200,7 +200,7 @@ class GoldenQuoteAnalyzer(BaseAnalyzer):
                         quote.content in msg["content"]
                         or msg["content"] in quote.content
                     ) and quote.sender == msg["sender"]:
-                        quote.qq = msg.get("qq", 0)
+                        quote.matrix = msg.get("matrix", 0)
                         break
 
             return quotes, usage

@@ -193,17 +193,17 @@ def extract_user_titles_with_regex(result_text: str, max_count: int) -> list[dic
         titles = []
 
         # 正则模式：匹配完整的用户称号对象
-        pattern = r'\{\s*"name":\s*"([^"]+)"\s*,\s*"qq":\s*(\d+)\s*,\s*"title":\s*"([^"]+)"\s*,\s*"mbti":\s*"([^"]+)"\s*,\s*"reason":\s*"([^"]*(?:\\.[^"]*)*)"\s*\}'
+        pattern = r'\{\s*"name":\s*"([^"]+)"\s*,\s*"matrix":\s*(\d+)\s*,\s*"title":\s*"([^"]+)"\s*,\s*"mbti":\s*"([^"]+)"\s*,\s*"reason":\s*"([^"]*(?:\\.[^"]*)*)"\s*\}'
         matches = re.findall(pattern, result_text, re.DOTALL)
 
         if not matches:
             # 尝试更宽松的匹配（字段顺序可变）
-            pattern = r'"name":\s*"([^"]+)"[^}]*"qq":\s*(\d+)[^}]*"title":\s*"([^"]+)"[^}]*"mbti":\s*"([^"]+)"[^}]*"reason":\s*"([^"]*(?:\\.[^"]*)*)"'
+            pattern = r'"name":\s*"([^"]+)"[^}]*"matrix":\s*(\d+)[^}]*"title":\s*"([^"]+)"[^}]*"mbti":\s*"([^"]+)"[^}]*"reason":\s*"([^"]*(?:\\.[^"]*)*)"'
             matches = re.findall(pattern, result_text, re.DOTALL)
 
         for match in matches[:max_count]:
             name = match[0].strip()
-            qq = int(match[1])
+            matrix = int(match[1])
             title = match[2].strip()
             mbti = match[3].strip()
             reason = match[4].strip()
@@ -212,7 +212,7 @@ def extract_user_titles_with_regex(result_text: str, max_count: int) -> list[dic
             reason = reason.replace('\\"', '"').replace("\\n", " ").replace("\\t", " ")
 
             titles.append(
-                {"name": name, "qq": qq, "title": title, "mbti": mbti, "reason": reason}
+                {"name": name, "matrix": matrix, "title": title, "mbti": mbti, "reason": reason}
             )
 
         logger.info(f"用户称号正则表达式提取成功，提取到 {len(titles)} 条有效用户称号")

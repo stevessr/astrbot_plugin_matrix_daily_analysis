@@ -40,13 +40,13 @@ class AutoScheduler:
         """设置bot实例（保持向后兼容）"""
         self.bot_manager.set_bot_instance(bot_instance)
 
-    def set_bot_qq_ids(self, bot_qq_ids):
-        """设置bot QQ号（支持单个QQ号或QQ号列表）"""
+    def set_bot_matrix_ids(self, bot_matrix_ids):
+        """设置bot matrix号（支持单个matrix号或matrix号列表）"""
         # 确保传入的是列表，保持统一处理
-        if isinstance(bot_qq_ids, list):
-            self.bot_manager.set_bot_qq_ids(bot_qq_ids)
-        elif bot_qq_ids:
-            self.bot_manager.set_bot_qq_ids([bot_qq_ids])
+        if isinstance(bot_matrix_ids, list):
+            self.bot_manager.set_bot_matrix_ids(bot_matrix_ids)
+        elif bot_matrix_ids:
+            self.bot_manager.set_bot_matrix_ids([bot_matrix_ids])
 
     async def get_platform_id_for_group(self, group_id):
         """根据群ID获取对应的平台ID"""

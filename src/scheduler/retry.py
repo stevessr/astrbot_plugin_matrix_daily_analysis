@@ -151,7 +151,7 @@ class RetryManager:
             logger.debug(f"[RetryManager] 正在重新渲染群 {task.group_id} 的图片...")
 
             # 修改：return_url=False 获取二进制数据而不是URL
-            # 这对于解决 NTQQ "Timeout" 错误至关重要，因为它避免了 QQ 客户端下载本地/内网 URL 的网络问题
+            # 这对于解决 NTmatrix "Timeout" 错误至关重要，因为它避免了 matrix 客户端下载本地/内网 URL 的网络问题
             image_data = await self.html_render_func(
                 task.html_content,
                 {},
