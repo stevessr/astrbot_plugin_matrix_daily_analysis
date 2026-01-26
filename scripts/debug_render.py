@@ -18,6 +18,7 @@ astrbot_api.logger.warning = lambda x, *args, **kwargs: print(f"[WARN] {x}")
 astrbot_api.AstrBotConfig = dict
 sys.modules["astrbot.api"] = astrbot_api
 
+from src.core.config import get_default_reports_dir  # noqa: E402
 from src.models.data_models import (  # noqa: E402
     ActivityVisualization,
     EmojiStatistics,
@@ -47,8 +48,8 @@ class MockConfigManager:
     def get_max_golden_quotes(self) -> int:
         return 5
 
-    def get_reports_dir(self) -> str:
-        return "data/pdf"
+    def get_reports_dir(self):
+        return get_default_reports_dir()
 
     def get_pdf_filename_format(self) -> str:
         return "report_{group_id}_{date}.pdf"

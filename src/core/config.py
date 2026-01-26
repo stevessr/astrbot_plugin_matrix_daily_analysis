@@ -9,6 +9,18 @@ from astrbot.api import AstrBotConfig, logger
 from astrbot.core.utils.astrbot_path import get_astrbot_data_path
 
 
+def get_default_reports_dir():
+    """获取插件报告目录（Path）"""
+    try:
+        plugin_name = "astrbot_plugin_matrix_daily_analysis"
+        data_path = get_astrbot_data_path()
+        return data_path / "plugin_data" / plugin_name / "reports"
+    except Exception:
+        from pathlib import Path
+
+        return Path("data/plugins/astrbot_plugin_matrix_daily_analysis/reports")
+
+
 class ConfigManager:
     """配置管理器"""
 
@@ -138,16 +150,9 @@ class ConfigManager:
         """获取金句分析专用 Provider ID"""
         return self.config.get("golden_quote_provider_id", "")
 
-    def get_reports_dir(self) -> str:
+    def get_reports_dir(self):
         """获取报告输出目录（固定为插件数据目录）"""
-        try:
-            plugin_name = "astrbot_plugin_matrix_daily_analysis"
-            data_path = get_astrbot_data_path()
-            default_path = data_path / "plugin_data" / plugin_name / "reports"
-            return str(default_path)
-        except Exception:
-            # Fallback
-            return "data/plugins/astrbot_plugin_matrix_daily_analysis/reports"
+        return get_default_reports_dir()
 
     def get_bot_matrix_ids(self) -> list:
         """获取 bot matrix 号列表"""

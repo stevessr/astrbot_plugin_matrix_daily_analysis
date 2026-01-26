@@ -2,6 +2,7 @@ import asyncio
 import os
 import sys
 from datetime import datetime
+from pathlib import Path
 
 # ==========================================
 # 1. Environment Setup (Critical for Imports)
@@ -18,12 +19,17 @@ print(f"Project Root: {project_root}")
 
 # Mock logger before importing anything that uses it
 from astrbot.api import logger  # noqa: E402
+from data.plugins.astrbot_plugin_matrix_daily_analysis.src.core.config import (  # noqa: E402
+    get_default_reports_dir,
+)  # noqa: E402
 
 logger.info = lambda msg, *args, **kwargs: print(f"[INFO] {msg}")
 logger.error = lambda msg, *args, **kwargs: print(f"[ERROR] {msg}")
 logger.warning = lambda msg, *args, **kwargs: print(f"[WARN] {msg}")
 
 # Now import plugin modules
+IMPORT_OK = True
+IMPORT_ERROR = ""
 try:
     from data.plugins.astrbot_plugin_matrix_daily_analysis.src.core.config import (
         ConfigManager,
@@ -32,8 +38,8 @@ try:
         ReportGenerator,
     )
 except ImportError as e:
-    print(f"Import Error: {e}")
-    sys.exit(1)
+    IMPORT_OK = False
+    IMPORT_ERROR = f"Import Error: {e}"
 
 
 # ==========================================
@@ -64,15 +70,19 @@ class MockConfig:
 
 
 class MockConfigManager(ConfigManager):
-    def get_reports_dir(self) -> str:
-        # Output to the scripts directory for easy access
-        return os.path.join(current_dir, "output")
+    def get_reports_dir(self):
+        return get_default_reports_dir()
 
 
 # ==========================================
 # 3. Main Execution
 # ==========================================
 async def main():
+    if not IMPORT_OK:
+        print(IMPORT_ERROR)
+        print("Skip PDF generation due to import failure.")
+        return
+
     print("Initializing ReportGenerator...")
     config_manager = MockConfigManager(MockConfig())
     generator = ReportGenerator(config_manager)
