@@ -70,7 +70,7 @@
         "type": "string",
         "description": "报告模板",
         "default": "scrapbook",
-        "hint": "分析报告使用的 HTML 模板名称，使用 `/设置模板` 查看使用指南，使用`/查看模板` 命令查看模板样式效果"
+        "hint": "分析报告使用的 HTML 模板名称，使用 `/设置模板` 查看使用指南，使用 `/查看模板` 命令查看模板样式效果"
     },
 
     "min_messages_threshold": {

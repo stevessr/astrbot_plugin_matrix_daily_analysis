@@ -1,6 +1,6 @@
 """
-HTML模板模块
-使用Jinja2加载外部HTML模板文件
+HTML 模板模块
+使用 Jinja2 加载外部 HTML 模板文件
 """
 
 import asyncio
@@ -13,14 +13,14 @@ from astrbot.api import logger
 
 
 class HTMLTemplates:
-    """HTML模板管理类"""
+    """HTML 模板管理类"""
 
     def __init__(self, config_manager):
-        """初始化Jinja2环境"""
+        """初始化 Jinja2 环境"""
         self.config_manager = config_manager
         # 设置模板根目录
         self.base_dir = os.path.join(os.path.dirname(__file__), "templates")
-        # 缓存不同模板的Jinja2环境（多线程安全）
+        # 缓存不同模板的 Jinja2 环境（多线程安全）
         self._envs = {}
         self._env_lock = threading.Lock()
 
@@ -36,7 +36,7 @@ class HTMLTemplates:
 
         template_dir = os.path.join(self.base_dir, template_name)
         if not os.path.exists(template_dir):
-            logger.warning(f"模板目录不存在: {template_dir}，回退到 scrapbook")
+            logger.warning(f"模板目录不存在：{template_dir}，回退到 scrapbook")
             template_dir = os.path.join(self.base_dir, "scrapbook")
 
         env = Environment(
@@ -69,7 +69,7 @@ class HTMLTemplates:
             return f.read()
 
     async def get_image_template_async(self) -> str:
-        """获取图片报告的HTML模板（异步版本，返回原始模板字符串）"""
+        """获取图片报告的 HTML 模板（异步版本，返回原始模板字符串）"""
         try:
             env = await self._get_env_async()
             template = env.get_template("image_template.html")
@@ -77,22 +77,22 @@ class HTMLTemplates:
                 self._read_template_file_sync, template.filename
             )
         except Exception as e:
-            logger.error(f"加载图片模板失败: {e}")
+            logger.error(f"加载图片模板失败：{e}")
             return ""
 
     def get_image_template(self) -> str:
-        """获取图片报告的HTML模板（同步版本，向后兼容）"""
+        """获取图片报告的 HTML 模板（同步版本，向后兼容）"""
         try:
             env = self._get_env()
             template = env.get_template("image_template.html")
             with open(template.filename, encoding="utf-8") as f:
                 return f.read()
         except Exception as e:
-            logger.error(f"加载图片模板失败: {e}")
+            logger.error(f"加载图片模板失败：{e}")
             return ""
 
     async def get_pdf_template_async(self) -> str:
-        """获取PDF报告的HTML模板（异步版本，返回原始模板字符串）"""
+        """获取 PDF 报告的 HTML 模板（异步版本，返回原始模板字符串）"""
         try:
             env = await self._get_env_async()
             template = env.get_template("pdf_template.html")
@@ -100,18 +100,18 @@ class HTMLTemplates:
                 self._read_template_file_sync, template.filename
             )
         except Exception as e:
-            logger.error(f"加载PDF模板失败: {e}")
+            logger.error(f"加载 PDF 模板失败：{e}")
             return ""
 
     def get_pdf_template(self) -> str:
-        """获取PDF报告的HTML模板（同步版本，向后兼容）"""
+        """获取 PDF 报告的 HTML 模板（同步版本，向后兼容）"""
         try:
             env = self._get_env()
             template = env.get_template("pdf_template.html")
             with open(template.filename, encoding="utf-8") as f:
                 return f.read()
         except Exception as e:
-            logger.error(f"加载PDF模板失败: {e}")
+            logger.error(f"加载 PDF 模板失败：{e}")
             return ""
 
     def render_template(self, template_name: str, **kwargs) -> str:
@@ -122,12 +122,12 @@ class HTMLTemplates:
             **kwargs: 传递给模板的变量
 
         Returns:
-            渲染后的HTML字符串
+            渲染后的 HTML 字符串
         """
         try:
             env = self._get_env()
             template = env.get_template(template_name)
             return template.render(**kwargs)
         except Exception as e:
-            logger.error(f"渲染模板 {template_name} 失败: {e}")
+            logger.error(f"渲染模板 {template_name} 失败：{e}")
             return ""

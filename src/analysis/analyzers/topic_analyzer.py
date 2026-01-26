@@ -33,7 +33,7 @@ class TopicAnalyzer(BaseAnalyzer):
         return self.config_manager.get_max_topics()
 
     def get_max_tokens(self) -> int:
-        """获取最大token数"""
+        """获取最大 token 数"""
         return self.config_manager.get_topic_max_tokens()
 
     def get_temperature(self) -> float:
@@ -52,7 +52,7 @@ class TopicAnalyzer(BaseAnalyzer):
         """
         # 验证输入数据格式
         if not isinstance(messages, list):
-            logger.error(f"build_prompt 期望列表，但收到: {type(messages)}")
+            logger.error(f"build_prompt 期望列表，但收到：{type(messages)}")
             return ""
 
         # 检查消息列表是否为空
@@ -63,17 +63,17 @@ class TopicAnalyzer(BaseAnalyzer):
         # 提取文本消息
         text_messages = []
         for i, msg in enumerate(messages):
-            # 确保msg是字典类型，避免'str' object has no attribute 'get'错误
+            # 确保 msg 是字典类型，避免'str' object has no attribute 'get'错误
             if not isinstance(msg, dict):
                 continue
 
             try:
                 sender = msg.get("sender", {})
-                # 确保sender是字典类型，避免'str' object has no attribute 'get'错误
+                # 确保 sender 是字典类型，避免'str' object has no attribute 'get'错误
                 if not isinstance(sender, dict):
                     continue
 
-                # 获取发送者ID并过滤机器人消息
+                # 获取发送者 ID 并过滤机器人消息
                 user_id = str(sender.get("user_id", ""))
                 bot_matrix_ids = self.config_manager.get_bot_matrix_ids()
 
@@ -131,12 +131,12 @@ class TopicAnalyzer(BaseAnalyzer):
                     )
             except Exception as e:
                 logger.error(
-                    f"build_prompt 处理第 {i + 1} 条消息时出错: {e}", exc_info=True
+                    f"build_prompt 处理第 {i + 1} 条消息时出错：{e}", exc_info=True
                 )
                 continue
 
         if not text_messages:
-            logger.warning("build_prompt 没有提取到有效的文本消息，返回空prompt")
+            logger.warning("build_prompt 没有提取到有效的文本消息，返回空 prompt")
             return ""
 
         # 构建消息文本
@@ -161,9 +161,9 @@ class TopicAnalyzer(BaseAnalyzer):
                 logger.info("使用配置中的话题分析提示词")
                 return prompt
             except KeyError as e:
-                logger.warning(f"话题分析提示词变量格式错误: {e}")
+                logger.warning(f"话题分析提示词变量格式错误：{e}")
             except Exception as e:
-                logger.warning(f"应用话题分析提示词失败: {e}")
+                logger.warning(f"应用话题分析提示词失败：{e}")
 
         logger.warning("未找到有效的话题分析提示词配置，请检查配置文件")
         return ""
@@ -173,7 +173,7 @@ class TopicAnalyzer(BaseAnalyzer):
         使用正则表达式提取话题信息
 
         Args:
-            result_text: LLM响应文本
+            result_text: LLM 响应文本
             max_topics: 最大话题数量
 
         Returns:
@@ -189,12 +189,12 @@ class TopicAnalyzer(BaseAnalyzer):
             topics_data: 原始话题数据列表
 
         Returns:
-            SummaryTopic对象列表
+            SummaryTopic 对象列表
         """
         logger.debug(
-            f"create_data_objects 开始处理，输入数据数量: {len(topics_data) if topics_data else 0}"
+            f"create_data_objects 开始处理，输入数据数量：{len(topics_data) if topics_data else 0}"
         )
-        logger.debug(f"输入数据类型: {type(topics_data)}")
+        logger.debug(f"输入数据类型：{type(topics_data)}")
 
         try:
             topics = []
@@ -203,12 +203,12 @@ class TopicAnalyzer(BaseAnalyzer):
             logger.debug(f"处理前 {max_topics} 条话题数据")
 
             for i, topic_data in enumerate(topics_data[:max_topics]):
-                logger.debug(f"处理第 {i + 1} 条话题数据，类型: {type(topic_data)}")
+                logger.debug(f"处理第 {i + 1} 条话题数据，类型：{type(topic_data)}")
 
-                # 确保topic_data是字典类型，避免'str' object has no attribute 'get'错误
+                # 确保 topic_data 是字典类型，避免'str' object has no attribute 'get'错误
                 if not isinstance(topic_data, dict):
                     logger.warning(
-                        f"跳过非字典类型的话题数据: {type(topic_data)} - {topic_data}"
+                        f"跳过非字典类型的话题数据：{type(topic_data)} - {topic_data}"
                     )
                     continue
 
@@ -219,12 +219,12 @@ class TopicAnalyzer(BaseAnalyzer):
                     detail = topic_data.get("detail", "").strip()
 
                     logger.debug(
-                        f"话题数据 - 名称: {topic_name}, 参与者: {contributors}, 详情: {detail[:50]}..."
+                        f"话题数据 - 名称：{topic_name}, 参与者：{contributors}, 详情：{detail[:50]}..."
                     )
 
                     # 验证必要字段
                     if not topic_name or not detail:
-                        logger.warning(f"话题数据格式不完整，跳过: {topic_data}")
+                        logger.warning(f"话题数据格式不完整，跳过：{topic_data}")
                         continue
 
                     # 确保参与者列表有效
@@ -239,19 +239,19 @@ class TopicAnalyzer(BaseAnalyzer):
                     topics.append(
                         SummaryTopic(
                             topic=topic_name,
-                            contributors=contributors[:5],  # 最多5个参与者
+                            contributors=contributors[:5],  # 最多 5 个参与者
                             detail=detail,
                         )
                     )
                 except Exception as e:
-                    logger.error(f"处理第 {i + 1} 条话题数据时出错: {e}", exc_info=True)
+                    logger.error(f"处理第 {i + 1} 条话题数据时出错：{e}", exc_info=True)
                     continue
 
             logger.debug(f"create_data_objects 完成，创建了 {len(topics)} 个话题对象")
             return topics
 
         except Exception as e:
-            logger.error(f"创建话题对象失败: {e}", exc_info=True)
+            logger.error(f"创建话题对象失败：{e}", exc_info=True)
             return []
 
     def extract_text_messages(self, messages: list[dict]) -> list[dict]:
@@ -265,9 +265,9 @@ class TopicAnalyzer(BaseAnalyzer):
             提取的文本消息列表
         """
         logger.debug(
-            f"extract_text_messages 开始处理，输入消息数量: {len(messages) if messages else 0}"
+            f"extract_text_messages 开始处理，输入消息数量：{len(messages) if messages else 0}"
         )
-        logger.debug(f"extract_text_messages 输入消息类型: {type(messages)}")
+        logger.debug(f"extract_text_messages 输入消息类型：{type(messages)}")
 
         if not messages:
             logger.warning("extract_text_messages 收到空消息列表")
@@ -276,28 +276,28 @@ class TopicAnalyzer(BaseAnalyzer):
         text_messages = []
 
         for i, msg in enumerate(messages):
-            logger.debug(f"处理第 {i + 1} 条消息，类型: {type(msg)}")
-            # 确保msg是字典类型，避免'str' object has no attribute 'get'错误
+            logger.debug(f"处理第 {i + 1} 条消息，类型：{type(msg)}")
+            # 确保 msg 是字典类型，避免'str' object has no attribute 'get'错误
             if not isinstance(msg, dict):
-                logger.warning(f"跳过非字典类型的消息: {type(msg)} - {msg}")
+                logger.warning(f"跳过非字典类型的消息：{type(msg)} - {msg}")
                 continue
 
             try:
                 sender = msg.get("sender", {})
-                # 确保sender是字典类型，避免'str' object has no attribute 'get'错误
+                # 确保 sender 是字典类型，避免'str' object has no attribute 'get'错误
                 if not isinstance(sender, dict):
                     logger.warning(
-                        f"extract_text_messages 跳过sender非字典类型的消息: {type(sender)} - {sender}"
+                        f"extract_text_messages 跳过 sender 非字典类型的消息：{type(sender)} - {sender}"
                     )
                     continue
 
-                # 获取发送者ID并过滤机器人消息
+                # 获取发送者 ID 并过滤机器人消息
                 user_id = str(sender.get("user_id", ""))
                 bot_matrix_ids = self.config_manager.get_bot_matrix_ids()
 
                 # 跳过机器人自己的消息
                 if bot_matrix_ids and user_id in [str(matrix) for matrix in bot_matrix_ids]:
-                    logger.debug(f"extract_text_messages 过滤掉机器人matrix号: {user_id}")
+                    logger.debug(f"extract_text_messages 过滤掉机器人 matrix 号：{user_id}")
                     continue
 
                 nickname = InfoUtils.get_user_nickname(self.config_manager, sender)
@@ -321,14 +321,14 @@ class TopicAnalyzer(BaseAnalyzer):
                                 }
                             )
             except Exception as e:
-                logger.error(f"处理第 {i + 1} 条消息时出错: {e}", exc_info=True)
+                logger.error(f"处理第 {i + 1} 条消息时出错：{e}", exc_info=True)
                 continue
 
         logger.debug(
             f"extract_text_messages 完成，提取到 {len(text_messages)} 条文本消息"
         )
         if text_messages:
-            logger.debug(f"extract_text_messages 第一条文本消息: {text_messages[0]}")
+            logger.debug(f"extract_text_messages 第一条文本消息：{text_messages[0]}")
         return text_messages
 
     async def analyze_topics(
@@ -342,18 +342,18 @@ class TopicAnalyzer(BaseAnalyzer):
             umo: 模型唯一标识符
 
         Returns:
-            (话题列表, Token使用统计)
+            (话题列表，Token 使用统计)
         """
         try:
             logger.debug(
-                f"analyze_topics 开始处理，消息数量: {len(messages) if messages else 0}"
+                f"analyze_topics 开始处理，消息数量：{len(messages) if messages else 0}"
             )
-            logger.debug(f"消息类型: {type(messages)}")
+            logger.debug(f"消息类型：{type(messages)}")
             if messages:
                 logger.debug(
-                    f"第一条消息类型: {type(messages[0]) if messages else '无'}"
+                    f"第一条消息类型：{type(messages[0]) if messages else '无'}"
                 )
-                logger.debug(f"第一条消息内容: {messages[0] if messages else '无'}")
+                logger.debug(f"第一条消息内容：{messages[0] if messages else '无'}")
 
             # 检查是否有有效的文本消息
             text_messages = self.extract_text_messages(messages)
@@ -364,14 +364,14 @@ class TopicAnalyzer(BaseAnalyzer):
                 return [], TokenUsage()
 
             logger.info(f"开始分析 {len(text_messages)} 条文本消息中的话题")
-            logger.debug(f"文本消息类型: {type(text_messages)}")
+            logger.debug(f"文本消息类型：{type(text_messages)}")
             if text_messages:
-                logger.debug(f"第一条文本消息类型: {type(text_messages[0])}")
-                logger.debug(f"第一条文本消息内容: {text_messages[0]}")
+                logger.debug(f"第一条文本消息类型：{type(text_messages[0])}")
+                logger.debug(f"第一条文本消息内容：{text_messages[0]}")
 
             # 直接传入原始消息，让 build_prompt 方法处理
             return await self.analyze(messages, umo)
 
         except Exception as e:
-            logger.error(f"话题分析失败: {e}", exc_info=True)
+            logger.error(f"话题分析失败：{e}", exc_info=True)
             return [], TokenUsage()

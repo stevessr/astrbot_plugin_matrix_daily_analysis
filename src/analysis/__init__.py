@@ -1,6 +1,6 @@
 """
 分析模块
-包含LLM分析和统计分析功能
+包含 LLM 分析和统计分析功能
 """
 
 from .llm_analyzer import LLMAnalyzer

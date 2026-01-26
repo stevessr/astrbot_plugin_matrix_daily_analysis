@@ -19,7 +19,7 @@ class ReportGenerator:
     def __init__(self, config_manager):
         self.config_manager = config_manager
         self.activity_visualizer = ActivityVisualizer()
-        self.html_templates = HTMLTemplates(config_manager)  # 实例化HTML模板管理器
+        self.html_templates = HTMLTemplates(config_manager)  # 实例化 HTML 模板管理器
 
     async def generate_image_report(
         self, analysis_result: dict, group_id: str, html_render_func, avatar_getter=None
@@ -29,8 +29,8 @@ class ReportGenerator:
 
         Returns:
             tuple[str | None, str | None]: (image_url, html_content)
-            - image_url: 生成的图片URL，如果生成失败则为None
-            - html_content: 生成的HTML内容，如果渲染失败但HTML生成成功，则返回此内容供重试
+            - image_url: 生成的图片 URL，如果生成失败则为 None
+            - html_content: 生成的 HTML 内容，如果渲染失败但 HTML 生成成功，则返回此内容供重试
         """
         html_content = None
         try:
@@ -39,27 +39,27 @@ class ReportGenerator:
                 analysis_result, chart_template="activity_chart.html", avatar_getter=avatar_getter
             )
 
-            # 先渲染HTML模板（使用异步方法）
+            # 先渲染 HTML 模板（使用异步方法）
             image_template = await self.html_templates.get_image_template_async()
             html_content = self._render_html_template(image_template, render_payload)
 
-            # 检查HTML内容是否有效
+            # 检查 HTML 内容是否有效
             if not html_content:
-                logger.error("图片报告HTML渲染失败：返回空内容")
+                logger.error("图片报告 HTML 渲染失败：返回空内容")
                 return None, None
 
-            logger.info(f"图片报告HTML渲染完成，长度: {len(html_content)} 字符")
+            logger.info(f"图片报告 HTML 渲染完成，长度：{len(html_content)} 字符")
 
             # 定义渲染策略
             render_strategies = [
-                # 1. 第一策略: PNG, Ultra quality, Device scale
+                # 1. 第一策略：PNG, Ultra quality, Device scale
                 {
                     "full_page": True,
                     "type": "png",
                     "scale": "device",
                     "device_scale_factor_level": "ultra",
                 },
-                # 2. 第二策略: JPEG, ultra, quality 100%, Device scale
+                # 2. 第二策略：JPEG, ultra, quality 100%, Device scale
                 {
                     "full_page": True,
                     "type": "jpeg",
@@ -67,7 +67,7 @@ class ReportGenerator:
                     "scale": "device",
                     "device_scale_factor_level": "ultra",
                 },
-                # 3. 第三策略: JPEG, high, quality 80%, Device scale
+                # 3. 第三策略：JPEG, high, quality 80%, Device scale
                 {
                     "full_page": True,
                     "type": "jpeg",
@@ -75,7 +75,7 @@ class ReportGenerator:
                     "scale": "device",
                     "device_scale_factor_level": "high",  # 尝试高分辨率
                 },
-                # 4. 第四策略: JPEG, normal quality, Device scale (后备)
+                # 4. 第四策略：JPEG, normal quality, Device scale (后备)
                 {
                     "full_page": True,
                     "type": "jpeg",
@@ -93,11 +93,11 @@ class ReportGenerator:
                     if image_options.get("type") == "png":
                         image_options["quality"] = None
 
-                    logger.info(f"尝试渲染策略: {image_options}")
+                    logger.info(f"尝试渲染策略：{image_options}")
                     image_url = await html_render_func(
-                        html_content,  # 渲染后的HTML内容
-                        {},  # 空数据字典，因为数据已包含在HTML中
-                        True,  # return_url=True，返回URL而不是下载文件
+                        html_content,  # 渲染后的 HTML 内容
+                        {},  # 空数据字典，因为数据已包含在 HTML 中
+                        True,  # return_url=True，返回 URL 而不是下载文件
                         image_options,
                     )
 
@@ -105,26 +105,26 @@ class ReportGenerator:
                         logger.info(f"图片生成成功 ({image_options}): {image_url}")
                         return image_url, html_content
                     else:
-                        logger.warning(f"渲染策略 {image_options} 返回空URL")
+                        logger.warning(f"渲染策略 {image_options} 返回空 URL")
 
                 except Exception as e:
-                    logger.warning(f"渲染策略 {image_options} 失败: {e}")
+                    logger.warning(f"渲染策略 {image_options} 失败：{e}")
                     last_exception = e
                     logger.warning("尝试下一个策略")
                     continue
 
             # 如果所有策略都失败
-            logger.error(f"所有渲染策略都失败。最后一个错误: {last_exception}")
+            logger.error(f"所有渲染策略都失败。最后一个错误：{last_exception}")
             return None, html_content
 
         except Exception as e:
-            logger.error(f"生成图片报告过程发生严重错误: {e}", exc_info=True)
+            logger.error(f"生成图片报告过程发生严重错误：{e}", exc_info=True)
             return None, html_content
 
     async def generate_pdf_report(
         self, analysis_result: dict, group_id: str, avatar_getter=None
     ) -> str | None:
-        """生成PDF格式的分析报告"""
+        """生成 PDF 格式的分析报告"""
         try:
             # 确保输出目录存在（使用 asyncio.to_thread 避免阻塞）
             output_dir = Path(self.config_manager.get_pdf_output_dir())
@@ -147,12 +147,12 @@ class ReportGenerator:
             pdf_template = await self.html_templates.get_pdf_template_async()
             html_content = self._render_html_template(pdf_template, render_data)
 
-            # 检查HTML内容是否有效
+            # 检查 HTML 内容是否有效
             if not html_content:
-                logger.error("PDF报告HTML渲染失败：返回空内容")
+                logger.error("PDF 报告 HTML 渲染失败：返回空内容")
                 return None
 
-            logger.info(f"HTML 内容生成完成，长度: {len(html_content)} 字符")
+            logger.info(f"HTML 内容生成完成，长度：{len(html_content)} 字符")
 
             # 转换为 PDF
             success = await self._html_to_pdf(html_content, str(pdf_path))
@@ -163,7 +163,7 @@ class ReportGenerator:
                 return None
 
         except Exception as e:
-            logger.error(f"生成 PDF 报告失败: {e}")
+            logger.error(f"生成 PDF 报告失败：{e}")
             return None
 
     def generate_text_report(self, analysis_result: dict) -> str:
@@ -177,11 +177,11 @@ class ReportGenerator:
 📅 {datetime.now().strftime("%Y年%m月%d日")}
 
 📊 基础统计
-• 消息总数: {stats.message_count}
-• 参与人数: {stats.participant_count}
-• 总字符数: {stats.total_characters}
-• 表情数量: {stats.emoji_count}
-• 最活跃时段: {stats.most_active_period}
+• 消息总数：{stats.message_count}
+• 参与人数：{stats.participant_count}
+• 总字符数：{stats.total_characters}
+• 表情数量：{stats.emoji_count}
+• 最活跃时段：{stats.most_active_period}
 
 💬 热门话题
 """
@@ -190,7 +190,7 @@ class ReportGenerator:
         for i, topic in enumerate(topics[:max_topics], 1):
             contributors_str = "、".join(topic.contributors)
             report += f"{i}. {topic.topic}\n"
-            report += f"   参与者: {contributors_str}\n"
+            report += f"   参与者：{contributors_str}\n"
             report += f"   {topic.detail}\n\n"
 
         report += "🏆 群友称号\n"
@@ -216,7 +216,7 @@ class ReportGenerator:
         user_titles = analysis_result["user_titles"]
         activity_viz = stats.activity_visualization
 
-        # 使用Jinja2模板构建话题HTML（批量渲染）
+        # 使用 Jinja2 模板构建话题 HTML（批量渲染）
         max_topics = self.config_manager.get_max_topics()
         topics_list = []
         for i, topic in enumerate(topics[:max_topics], 1):
@@ -231,9 +231,9 @@ class ReportGenerator:
         topics_html = self.html_templates.render_template(
             "topic_item.html", topics=topics_list
         )
-        logger.info(f"话题HTML生成完成，长度: {len(topics_html)}")
+        logger.info(f"话题 HTML 生成完成，长度：{len(topics_html)}")
 
-        # 使用Jinja2模板构建用户称号HTML（批量渲染，包含头像）
+        # 使用 Jinja2 模板构建用户称号 HTML（批量渲染，包含头像）
         max_user_titles = self.config_manager.get_max_user_titles()
         titles_list = []
         for title in user_titles[:max_user_titles]:
@@ -251,9 +251,9 @@ class ReportGenerator:
         titles_html = self.html_templates.render_template(
             "user_title_item.html", titles=titles_list
         )
-        logger.info(f"用户称号HTML生成完成，长度: {len(titles_html)}")
+        logger.info(f"用户称号 HTML 生成完成，长度：{len(titles_html)}")
 
-        # 使用Jinja2模板构建金句HTML（批量渲染）
+        # 使用 Jinja2 模板构建金句 HTML（批量渲染）
         max_golden_quotes = self.config_manager.get_max_golden_quotes()
         quotes_list = []
         for quote in stats.golden_quotes[:max_golden_quotes]:
@@ -272,16 +272,16 @@ class ReportGenerator:
         quotes_html = self.html_templates.render_template(
             "quote_item.html", quotes=quotes_list
         )
-        logger.info(f"金句HTML生成完成，长度: {len(quotes_html)}")
+        logger.info(f"金句 HTML 生成完成，长度：{len(quotes_html)}")
 
-        # 生成活跃度可视化HTML
+        # 生成活跃度可视化 HTML
         chart_data = self.activity_visualizer.get_hourly_chart_data(
             activity_viz.hourly_activity
         )
         hourly_chart_html = self.html_templates.render_template(
             chart_template, chart_data=chart_data
         )
-        logger.info(f"活跃度图表HTML生成完成，长度: {len(hourly_chart_html)}")
+        logger.info(f"活跃度图表 HTML 生成完成，长度：{len(hourly_chart_html)}")
 
         # 准备最终渲染数据
         render_data = {
@@ -311,10 +311,10 @@ class ReportGenerator:
         return render_data
 
     def _render_html_template(self, template: str, data: dict) -> str:
-        """HTML模板渲染，使用 {{key}} 占位符格式
+        """HTML 模板渲染，使用 {{key}} 占位符格式
 
         Args:
-            template: HTML模板字符串
+            template: HTML 模板字符串
             data: 渲染数据字典
         """
         result = template
@@ -335,7 +335,7 @@ class ReportGenerator:
         return result
 
     async def _get_user_avatar(self, user_id: str, avatar_getter=None) -> str | None:
-        """获取用户头像的base64编码"""
+        """获取用户头像的 base64 编码"""
         try:
             if avatar_getter:
                 try:
@@ -359,7 +359,7 @@ class ReportGenerator:
                 from playwright.async_api import async_playwright
             except ImportError:
                 logger.error("playwright 未安装，无法生成 PDF")
-                logger.info("💡 请尝试运行: pip install playwright")
+                logger.info("💡 请尝试运行：pip install playwright")
                 return False
 
             import os
@@ -377,12 +377,12 @@ class ReportGenerator:
                 if custom_browser_path:
                     if Path(custom_browser_path).exists():
                         logger.info(
-                            f"使用配置的自定义浏览器路径: {custom_browser_path}"
+                            f"使用配置的自定义浏览器路径：{custom_browser_path}"
                         )
                         executable_path = custom_browser_path
                     else:
                         logger.warning(
-                            f"配置的浏览器路径不存在: {custom_browser_path}，尝试自动检测..."
+                            f"配置的浏览器路径不存在：{custom_browser_path}，尝试自动检测..."
                         )
 
                 # 1. 如果没有自定义路径，尝试自动检测系统浏览器
@@ -438,7 +438,7 @@ class ReportGenerator:
                     for path in system_browser_paths:
                         if Path(path).exists():
                             executable_path = path
-                            logger.info(f"使用系统浏览器: {path}")
+                            logger.info(f"使用系统浏览器：{path}")
                             break
 
                 # 定义默认启动参数
@@ -469,13 +469,13 @@ class ReportGenerator:
                         )
 
                 except Exception as e:
-                    logger.warning(f"浏览器启动失败: {e}")
+                    logger.warning(f"浏览器启动失败：{e}")
                     if "Executable doesn't exist" in str(e) or "executable at" in str(
                         e
                     ):
                         logger.error("未找到可用的浏览器。")
                         logger.info(
-                            "💡 请确保已安装 Playwright 浏览器: playwright install chromium"
+                            "💡 请确保已安装 Playwright 浏览器：playwright install chromium"
                         )
                         logger.info("💡 或者安装 Google Chrome / Microsoft Edge")
                     return False
@@ -505,16 +505,16 @@ class ReportGenerator:
                             "left": "10mm",
                         },
                     )
-                    logger.info(f"PDF 生成成功: {output_path}")
+                    logger.info(f"PDF 生成成功：{output_path}")
                     return True
 
                 except Exception as e:
-                    logger.error(f"PDF 生成过程出错: {e}")
+                    logger.error(f"PDF 生成过程出错：{e}")
                     return False
                 finally:
                     if browser:
                         await browser.close()
 
         except Exception as e:
-            logger.error(f"Playwright 运行出错: {e}")
+            logger.error(f"Playwright 运行出错：{e}")
             return False

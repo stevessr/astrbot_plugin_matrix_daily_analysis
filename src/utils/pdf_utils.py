@@ -1,6 +1,6 @@
 """
-PDF工具模块
-负责PDF相关的安装和管理功能
+PDF 工具模块
+负责 PDF 相关的安装和管理功能
 """
 
 import asyncio
@@ -11,7 +11,7 @@ from astrbot.api import logger
 
 
 class PDFInstaller:
-    """PDF功能安装器"""
+    """PDF 功能安装器"""
 
     # 类级别的线程池，用于异步下载任务
     _executor = ThreadPoolExecutor(
@@ -46,8 +46,8 @@ class PDFInstaller:
 
             if process.returncode != 0:
                 error_msg = stderr.decode()
-                logger.error(f"playwright pip 安装失败: {error_msg}")
-                return f"❌ pip install playwright 失败: {error_msg}"
+                logger.error(f"playwright pip 安装失败：{error_msg}")
+                return f"❌ pip install playwright 失败：{error_msg}"
 
             logger.info("pip 包安装成功，检查是否需要安装浏览器内核...")
 
@@ -57,7 +57,7 @@ class PDFInstaller:
             custom_path = config_manager.get_browser_path()
             if custom_path and Path(custom_path).exists():
                 logger.info(
-                    f"检测到自定义浏览器路径: {custom_path}，将跳过 Chromium 内核安装。"
+                    f"检测到自定义浏览器路径：{custom_path}，将跳过 Chromium 内核安装。"
                 )
                 return f"✅ Playwright 包安装成功。检测到自定义浏览器路径 `{custom_path}`，已跳过浏览器内核安装。您可以现在尝试生成 PDF。"
 
@@ -65,8 +65,8 @@ class PDFInstaller:
             return await PDFInstaller.install_system_deps()
 
         except Exception as e:
-            logger.error(f"安装 playwright 时出错: {e}")
-            return f"❌ 安装过程中出错: {str(e)}"
+            logger.error(f"安装 playwright 时出错：{e}")
+            return f"❌ 安装过程中出错：{str(e)}"
 
     @staticmethod
     async def install_system_deps():
@@ -94,8 +94,8 @@ class PDFInstaller:
 
         except Exception as e:
             PDFInstaller._install_status["in_progress"] = False
-            logger.error(f"启动安装任务失败: {e}")
-            return f"❌ 启动安装任务失败: {e}"
+            logger.error(f"启动安装任务失败：{e}")
+            return f"❌ 启动安装任务失败：{e}"
 
     @staticmethod
     async def _background_playwright_install():
@@ -120,7 +120,7 @@ class PDFInstaller:
 
             if process.returncode == 0:
                 PDFInstaller._install_status["completed"] = True
-                logger.info(f"✅ Playwright Chromium 安装成功: {stdout.decode()}")
+                logger.info(f"✅ Playwright Chromium 安装成功：{stdout.decode()}")
 
                 # 尝试安装系统依赖 (Linux only，通常不需要 root 无法执行，但尝试一下无妨或者提示用户)
                 if sys.platform.startswith("linux"):
@@ -129,24 +129,24 @@ class PDFInstaller:
                     # 真正的系统依赖安装通常由 Dockerfile 或用户手动完成
                     # 这里我们仅记录日志建议
                     logger.info(
-                        "💡 如果 Linux 下仍无法生成 PDF，请尝试运行: sudo playwright install-deps"
+                        "💡 如果 Linux 下仍无法生成 PDF，请尝试运行：sudo playwright install-deps"
                     )
 
             else:
                 PDFInstaller._install_status["failed"] = True
                 PDFInstaller._install_status["error_message"] = stderr.decode()
-                logger.error(f"❌ Playwright Chromium 安装失败: {stderr.decode()}")
+                logger.error(f"❌ Playwright Chromium 安装失败：{stderr.decode()}")
 
         except Exception as e:
             PDFInstaller._install_status["failed"] = True
             PDFInstaller._install_status["error_message"] = str(e)
-            logger.error(f"Playwright 安装后台任务出错: {e}")
+            logger.error(f"Playwright 安装后台任务出错：{e}")
         finally:
             PDFInstaller._install_status["in_progress"] = False
 
     @staticmethod
     def get_pdf_status(config_manager) -> str:
-        """获取PDF功能状态"""
+        """获取 PDF 功能状态"""
         if config_manager.playwright_available:
             version = config_manager.playwright_version or "未知版本"
 
@@ -155,8 +155,8 @@ class PDFInstaller:
             if PDFInstaller._install_status["in_progress"]:
                 status += "\n⏳ 正在后台安装浏览器内核..."
             elif PDFInstaller._install_status["failed"]:
-                status += f"\n❌ 上次浏览器安装失败: {PDFInstaller._install_status.get('error_message', '未知错误')}"
+                status += f"\n❌ 上次浏览器安装失败：{PDFInstaller._install_status.get('error_message', '未知错误')}"
 
             return status
         else:
-            return "❌ PDF 功能不可用 - 请输入 /安装PDF 进行安装"
+            return "❌ PDF 功能不可用 - 请输入 /安装 PDF 进行安装"

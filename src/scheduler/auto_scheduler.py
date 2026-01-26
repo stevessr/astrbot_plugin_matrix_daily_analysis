@@ -37,11 +37,11 @@ class AutoScheduler:
         self.last_execution_date = None  # 记录上次执行日期，防止重复执行
 
     def set_bot_instance(self, bot_instance):
-        """设置bot实例（保持向后兼容）"""
+        """设置 bot 实例（保持向后兼容）"""
         self.bot_manager.set_bot_instance(bot_instance)
 
     def set_bot_matrix_ids(self, bot_matrix_ids):
-        """设置bot matrix号（支持单个matrix号或matrix号列表）"""
+        """设置 bot matrix 号（支持单个 matrix 号或 matrix 号列表）"""
         # 确保传入的是列表，保持统一处理
         if isinstance(bot_matrix_ids, list):
             self.bot_manager.set_bot_matrix_ids(bot_matrix_ids)
@@ -49,9 +49,9 @@ class AutoScheduler:
             self.bot_manager.set_bot_matrix_ids([bot_matrix_ids])
 
     async def get_platform_id_for_group(self, group_id):
-        """根据群ID获取对应的平台ID"""
+        """根据群 ID 获取对应的平台 ID"""
         try:
-            # 首先检查已注册的bot实例
+            # 首先检查已注册的 bot 实例
             if (
                 hasattr(self.bot_manager, "_bot_instances")
                 and self.bot_manager._bot_instances
@@ -59,10 +59,10 @@ class AutoScheduler:
                 # 如果只有一个实例，直接返回
                 if len(self.bot_manager._bot_instances) == 1:
                     platform_id = list(self.bot_manager._bot_instances.keys())[0]
-                    logger.debug(f"只有一个适配器，使用平台: {platform_id}")
+                    logger.debug(f"只有一个适配器，使用平台：{platform_id}")
                     return platform_id
 
-                # 如果有多个实例，尝试通过API检查群属于哪个适配器
+                # 如果有多个实例，尝试通过 API 检查群属于哪个适配器
                 logger.info(f"检测到多个适配器，正在验证群 {group_id} 属于哪个平台...")
                 for (
                     platform_id,
@@ -79,39 +79,39 @@ class AutoScheduler:
                                 return platform_id
                             else:
                                 logger.debug(
-                                    f"平台 {platform_id} 返回了无效结果: {result}"
+                                    f"平台 {platform_id} 返回了无效结果：{result}"
                                 )
                         else:
                             logger.debug(
                                 f"平台 {platform_id} 的 bot 实例没有 call_action 方法"
                             )
                     except Exception as e:
-                        # 检查是否是特定的错误码（1200表示不在该群）
+                        # 检查是否是特定的错误码（1200 表示不在该群）
                         error_msg = str(e)
                         if (
                             "retcode=1200" in error_msg
-                            or "消息undefined不存在" in error_msg
+                            or "消息 undefined 不存在" in error_msg
                         ):
                             logger.debug(
-                                f"平台 {platform_id} 确认群 {group_id} 不存在: {e}"
+                                f"平台 {platform_id} 确认群 {group_id} 不存在：{e}"
                             )
                         else:
                             logger.debug(
-                                f"平台 {platform_id} 无法获取群 {group_id} 信息: {e}"
+                                f"平台 {platform_id} 无法获取群 {group_id} 信息：{e}"
                             )
                         continue
 
                 # 如果所有适配器都尝试失败，记录错误并返回 None
                 logger.error(
-                    f"❌ 无法确定群 {group_id} 属于哪个平台 (已尝试: {list(self.bot_manager._bot_instances.keys())})"
+                    f"❌ 无法确定群 {group_id} 属于哪个平台 (已尝试：{list(self.bot_manager._bot_instances.keys())})"
                 )
                 return None
 
-            # 没有任何bot实例，返回None
-            logger.error("❌ 没有注册的bot实例")
+            # 没有任何 bot 实例，返回 None
+            logger.error("❌ 没有注册的 bot 实例")
             return None
         except Exception as e:
-            logger.error(f"❌ 获取平台ID失败: {e}")
+            logger.error(f"❌ 获取平台 ID 失败：{e}")
             return None
 
     async def start_scheduler(self):
@@ -124,7 +124,7 @@ class AutoScheduler:
         await asyncio.sleep(10)
 
         logger.info(
-            f"启动定时任务调度器，自动分析时间: {self.config_manager.get_auto_analysis_time()}"
+            f"启动定时任务调度器，自动分析时间：{self.config_manager.get_auto_analysis_time()}"
         )
 
         self.scheduler_task = asyncio.create_task(self._scheduler_loop())
@@ -171,22 +171,22 @@ class AutoScheduler:
                             f"今天 {target_time.date()} 已经执行过自动分析，跳过执行"
                         )
                         # 等待到明天再检查
-                        await asyncio.sleep(3600)  # 等待1小时后再检查
+                        await asyncio.sleep(3600)  # 等待 1 小时后再检查
                         continue
 
                     logger.info("开始执行定时分析")
                     await self._run_auto_analysis()
                     self.last_execution_date = target_time.date()  # 记录执行日期
                     logger.info(
-                        f"定时分析执行完成，记录执行日期: {self.last_execution_date}"
+                        f"定时分析执行完成，记录执行日期：{self.last_execution_date}"
                     )
                 else:
                     logger.info("自动分析已禁用，跳过执行")
                     break
 
             except Exception as e:
-                logger.error(f"定时任务调度器错误: {e}")
-                # 等待5分钟后重试
+                logger.error(f"定时任务调度器错误：{e}")
+                # 等待 5 分钟后重试
                 await asyncio.sleep(300)
 
     async def _run_auto_analysis(self):
@@ -200,7 +200,7 @@ class AutoScheduler:
             # 始终获取所有群组并进行过滤
             logger.info(f"自动分析使用 {group_list_mode} 模式，正在获取群列表...")
             all_groups = await self._get_all_groups()
-            logger.info(f"共获取到 {len(all_groups)} 个群组: {all_groups}")
+            logger.info(f"共获取到 {len(all_groups)} 个群组：{all_groups}")
             enabled_groups = []
             for group_id in all_groups:
                 if self.config_manager.is_group_allowed(group_id):
@@ -215,13 +215,13 @@ class AutoScheduler:
                 return
 
             logger.info(
-                f"将为 {len(enabled_groups)} 个群聊并发执行分析: {enabled_groups}"
+                f"将为 {len(enabled_groups)} 个群聊并发执行分析：{enabled_groups}"
             )
 
             # 创建并发任务 - 为每个群聊创建独立的分析任务
             # 限制最大并发数
             max_concurrent = self.config_manager.get_max_concurrent_tasks()
-            logger.info(f"自动分析并发数限制: {max_concurrent}")
+            logger.info(f"自动分析并发数限制：{max_concurrent}")
             sem = asyncio.Semaphore(max_concurrent)
 
             async def safe_perform_analysis(group_id):
@@ -248,29 +248,29 @@ class AutoScheduler:
             for i, result in enumerate(results):
                 group_id = enabled_groups[i]
                 if isinstance(result, Exception):
-                    logger.error(f"群 {group_id} 分析任务异常: {result}")
+                    logger.error(f"群 {group_id} 分析任务异常：{result}")
                     error_count += 1
                 else:
                     success_count += 1
 
             logger.info(
-                f"并发分析完成 - 成功: {success_count}, 失败: {error_count}, 总计: {len(enabled_groups)}"
+                f"并发分析完成 - 成功：{success_count}, 失败：{error_count}, 总计：{len(enabled_groups)}"
             )
 
         except Exception as e:
-            logger.error(f"自动分析执行失败: {e}", exc_info=True)
+            logger.error(f"自动分析执行失败：{e}", exc_info=True)
 
     async def _perform_auto_analysis_for_group_with_timeout(self, group_id: str):
         """为指定群执行自动分析（带超时控制）"""
         try:
-            # 为每个群聊设置独立的超时时间（20分钟）- 使用 asyncio.wait_for 兼容所有 Python 版本
+            # 为每个群聊设置独立的超时时间（20 分钟）- 使用 asyncio.wait_for 兼容所有 Python 版本
             await asyncio.wait_for(
                 self._perform_auto_analysis_for_group(group_id), timeout=1200
             )
         except asyncio.TimeoutError:
-            logger.error(f"群 {group_id} 分析超时（20分钟），跳过该群分析")
+            logger.error(f"群 {group_id} 分析超时（20 分钟），跳过该群分析")
         except Exception as e:
-            logger.error(f"群 {group_id} 分析任务执行失败: {e}")
+            logger.error(f"群 {group_id} 分析任务执行失败：{e}")
 
     async def _perform_auto_analysis_for_group(self, group_id: str):
         """为指定群执行自动分析（核心逻辑）"""
@@ -290,11 +290,11 @@ class AutoScheduler:
             try:
                 start_time = asyncio.get_event_loop().time()
 
-                # 检查bot管理器状态
+                # 检查 bot 管理器状态
                 if not self.bot_manager.is_ready_for_auto_analysis():
                     status = self.bot_manager.get_status_info()
                     logger.warning(
-                        f"群 {group_id} 自动分析跳过：bot管理器未就绪 - {status}"
+                        f"群 {group_id} 自动分析跳过：bot 管理器未就绪 - {status}"
                     )
                     return
 
@@ -305,7 +305,7 @@ class AutoScheduler:
                 platform_id = None
                 bot_instance = None
 
-                # 获取所有可用的平台ID和bot实例
+                # 获取所有可用的平台 ID 和 bot 实例
                 if (
                     hasattr(self.bot_manager, "_bot_instances")
                     and self.bot_manager._bot_instances
@@ -352,7 +352,7 @@ class AutoScheduler:
                                 )
                         except Exception as e:
                             logger.debug(
-                                f"平台 {test_platform_id} 获取消息失败: {e}，继续尝试下一个平台"
+                                f"平台 {test_platform_id} 获取消息失败：{e}，继续尝试下一个平台"
                             )
                             continue
 
@@ -367,14 +367,14 @@ class AutoScheduler:
                     platform_id = await self.get_platform_id_for_group(group_id)
 
                     if not platform_id:
-                        logger.error(f"❌ 群 {group_id} 无法获取平台ID，跳过分析")
+                        logger.error(f"❌ 群 {group_id} 无法获取平台 ID，跳过分析")
                         return
 
                     bot_instance = self.bot_manager.get_bot_instance(platform_id)
 
                     if not bot_instance:
                         logger.error(
-                            f"❌ 群 {group_id} 未找到对应的bot实例（平台: {platform_id}）"
+                            f"❌ 群 {group_id} 未找到对应的 bot 实例（平台：{platform_id}）"
                         )
                         return
 
@@ -417,17 +417,17 @@ class AutoScheduler:
                 # 记录执行时间
                 end_time = asyncio.get_event_loop().time()
                 execution_time = end_time - start_time
-                logger.info(f"群 {group_id} 分析完成，耗时: {execution_time:.2f}秒")
+                logger.info(f"群 {group_id} 分析完成，耗时：{execution_time:.2f}秒")
 
             except Exception as e:
-                logger.error(f"群 {group_id} 自动分析执行失败: {e}", exc_info=True)
+                logger.error(f"群 {group_id} 自动分析执行失败：{e}", exc_info=True)
 
             finally:
                 # 锁资源由 WeakValueDictionary 自动管理，无需手动清理
                 logger.info(f"群 {group_id} 自动分析完成")
 
     async def _get_all_groups(self) -> list[str]:
-        """获取所有bot实例所在的群列表"""
+        """获取所有 bot 实例所在的群列表"""
         all_groups = set()
 
         if (
@@ -454,7 +454,7 @@ class AutoScheduler:
                     all_groups.update(rooms)
                     logger.info(f"Matrix 平台获取到 {len(rooms)} 个房间")
             except Exception as e:
-                logger.error(f"Matrix 获取房间列表失败: {e}")
+                logger.error(f"Matrix 获取房间列表失败：{e}")
 
         return list(all_groups)
 
@@ -536,12 +536,12 @@ class AutoScheduler:
                                     group_id, f"📊 每日群聊分析报告：\n\n{text_report}"
                                 )
                         elif html_content:
-                            # 生成失败但有HTML，加入重试队列
+                            # 生成失败但有 HTML，加入重试队列
                             logger.warning(
                                 f"群 {group_id} 图片报告生成失败，加入重试队列"
                             )
 
-                            # 尝试获取 platform_id (如果参数为None)
+                            # 尝试获取 platform_id (如果参数为 None)
                             if not platform_id:
                                 platform_id = await self.get_platform_id_for_group(
                                     group_id
@@ -557,7 +557,7 @@ class AutoScheduler:
                                 )
                             else:
                                 logger.error(
-                                    f"群 {group_id} 无法获取平台ID，无法加入重试队列"
+                                    f"群 {group_id} 无法获取平台 ID，无法加入重试队列"
                                 )
                                 # Fallback to text
                                 text_report = (
@@ -570,9 +570,9 @@ class AutoScheduler:
                                 )
 
                         else:
-                            # 图片生成失败（返回None），回退到文本
+                            # 图片生成失败（返回 None），回退到文本
                             logger.warning(
-                                f"群 {group_id} 图片报告生成失败（返回None），回退到文本报告"
+                                f"群 {group_id} 图片报告生成失败（返回 None），回退到文本报告"
                             )
                             text_report = self.report_generator.generate_text_report(
                                 analysis_result
@@ -582,7 +582,7 @@ class AutoScheduler:
                             )
                     except Exception as img_e:
                         logger.error(
-                            f"群 {group_id} 图片报告生成异常: {img_e}，回退到文本报告"
+                            f"群 {group_id} 图片报告生成异常：{img_e}，回退到文本报告"
                         )
                         text_report = self.report_generator.generate_text_report(
                             analysis_result
@@ -591,8 +591,8 @@ class AutoScheduler:
                             group_id, f"📊 每日群聊分析报告：\n\n{text_report}"
                         )
                 else:
-                    # 没有html_render函数，回退到文本报告
-                    logger.warning(f"群 {group_id} 缺少html_render函数，回退到文本报告")
+                    # 没有 html_render 函数，回退到文本报告
+                    logger.warning(f"群 {group_id} 缺少 html_render 函数，回退到文本报告")
                     text_report = self.report_generator.generate_text_report(
                         analysis_result
                     )
@@ -602,7 +602,7 @@ class AutoScheduler:
 
             elif output_format == "pdf":
                 if not self.config_manager.playwright_available:
-                    logger.warning(f"群 {group_id} PDF功能不可用，回退到文本报告")
+                    logger.warning(f"群 {group_id} PDF 功能不可用，回退到文本报告")
                     text_report = self.report_generator.generate_text_report(
                         analysis_result
                     )
@@ -616,10 +616,10 @@ class AutoScheduler:
                         )
                         if pdf_path:
                             await self._send_pdf_file(group_id, pdf_path)
-                            logger.info(f"群 {group_id} 自动分析完成，已发送PDF报告")
+                            logger.info(f"群 {group_id} 自动分析完成，已发送 PDF 报告")
                         else:
                             logger.error(
-                                f"群 {group_id} PDF报告生成失败（返回None），回退到文本报告"
+                                f"群 {group_id} PDF 报告生成失败（返回 None），回退到文本报告"
                             )
                             text_report = self.report_generator.generate_text_report(
                                 analysis_result
@@ -629,7 +629,7 @@ class AutoScheduler:
                             )
                     except Exception as pdf_e:
                         logger.error(
-                            f"群 {group_id} PDF报告生成异常: {pdf_e}，回退到文本报告"
+                            f"群 {group_id} PDF 报告生成异常：{pdf_e}，回退到文本报告"
                         )
                         text_report = self.report_generator.generate_text_report(
                             analysis_result
@@ -648,7 +648,7 @@ class AutoScheduler:
             logger.info(f"群 {group_id} 自动分析完成，已发送报告")
 
         except Exception as e:
-            logger.error(f"发送分析报告到群 {group_id} 失败: {e}")
+            logger.error(f"发送分析报告到群 {group_id} 失败：{e}")
 
     async def _send_image_message(self, group_id: str, image_url: str):
         """发送图片消息到群（仅支持 Matrix，通过 upload 方式）"""
@@ -668,12 +668,12 @@ class AutoScheduler:
                 logger.warning(f"群 {group_id} 没有多个平台可用，使用回退逻辑")
                 platform_id = await self.get_platform_id_for_group(group_id)
                 if not platform_id:
-                    logger.error(f"❌ 群 {group_id} 无法获取平台ID，无法发送图片")
+                    logger.error(f"❌ 群 {group_id} 无法获取平台 ID，无法发送图片")
                     return False
                 bot_instance = self.bot_manager.get_bot_instance(platform_id)
                 if not bot_instance:
                     logger.error(
-                        f"❌ 群 {group_id} 发送图片失败：缺少bot实例（平台: {platform_id}）"
+                        f"❌ 群 {group_id} 发送图片失败：缺少 bot 实例（平台：{platform_id}）"
                     )
                     return False
                 available_platforms = [(platform_id, bot_instance)]
@@ -686,17 +686,17 @@ class AutoScheduler:
                     async with session.get(image_url) as resp:
                         if resp.status != 200:
                             logger.error(
-                                f"群 {group_id} 下载图片失败: status={resp.status}"
+                                f"群 {group_id} 下载图片失败：status={resp.status}"
                             )
                             image_bytes = None
                         else:
                             max_bytes = 10 * 1024 * 1024 # 10MB
                             image_bytes = await resp.read()
                             if len(image_bytes) > max_bytes:
-                                logger.error(f"图片太大: {len(image_bytes)}")
+                                logger.error(f"图片太大：{len(image_bytes)}")
                                 image_bytes = None
             except Exception as e:
-                logger.error(f"群 {group_id} 下载图片失败: {e}")
+                logger.error(f"群 {group_id} 下载图片失败：{e}")
                 image_bytes = None
 
             if image_bytes:
@@ -729,7 +729,7 @@ class AutoScheduler:
                                     logger.info("✅ Matrix 图片发送成功")
                                     return True
                     except Exception as e:
-                            logger.error(f"Matrix 图片发送失败: {e}")
+                            logger.error(f"Matrix 图片发送失败：{e}")
                     continue
 
             logger.error(f"❌ 群 {group_id} 图片发送失败，回退到文本")
@@ -740,7 +740,7 @@ class AutoScheduler:
             return False
 
         except Exception as e:
-            logger.error(f"发送图片消息到群 {group_id} 失败: {e}")
+            logger.error(f"发送图片消息到群 {group_id} 失败：{e}")
             return False
 
     async def _send_text_message(self, group_id: str, text_content: str):
@@ -758,7 +758,7 @@ class AutoScheduler:
             else:
                 platform_id = await self.get_platform_id_for_group(group_id)
                 if not platform_id:
-                    logger.error(f"❌ 群 {group_id} 无法获取平台ID，无法发送文本")
+                    logger.error(f"❌ 群 {group_id} 无法获取平台 ID，无法发送文本")
                     return False
                 bot_instance = self.bot_manager.get_bot_instance(platform_id)
                 available_platforms = [(platform_id, bot_instance)]
@@ -775,18 +775,18 @@ class AutoScheduler:
                     logger.info("✅ Matrix 文本发送成功")
                     return True
                 except Exception as e:
-                    logger.error(f"Matrix 文本发送失败: {e}")
+                    logger.error(f"Matrix 文本发送失败：{e}")
                     continue
 
             logger.error(f"❌ 群 {group_id} 文本发送失败")
             return False
 
         except Exception as e:
-            logger.error(f"发送文本消息到群 {group_id} 失败: {e}")
+            logger.error(f"发送文本消息到群 {group_id} 失败：{e}")
             return False
 
     async def _send_pdf_file(self, group_id: str, pdf_path: str):
-        """发送PDF文件到群 - 仅支持 Matrix"""
+        """发送 PDF 文件到群 - 仅支持 Matrix"""
         try:
             # 获取所有可用的平台，依次尝试发送
             if (
@@ -795,12 +795,12 @@ class AutoScheduler:
             ):
                 available_platforms = list(self.bot_manager._bot_instances.items())
                 logger.info(
-                    f"群 {group_id} 检测到 {len(available_platforms)} 个可用平台，开始依次尝试发送PDF..."
+                    f"群 {group_id} 检测到 {len(available_platforms)} 个可用平台，开始依次尝试发送 PDF..."
                 )
             else:
                 platform_id = await self.get_platform_id_for_group(group_id)
                 if not platform_id:
-                    logger.error(f"❌ 群 {group_id} 无法获取平台ID，无法发送PDF")
+                    logger.error(f"❌ 群 {group_id} 无法获取平台 ID，无法发送 PDF")
                     return False
                 bot_instance = self.bot_manager.get_bot_instance(platform_id)
                 available_platforms = [(platform_id, bot_instance)]
@@ -835,15 +835,15 @@ class AutoScheduler:
                                     "info": {"mimetype": "application/pdf"}
                                 }
                                 )
-                                logger.info("✅ Matrix PDF发送成功")
+                                logger.info("✅ Matrix PDF 发送成功")
                                 return True
                 except Exception as e:
-                        logger.error(f"Matrix PDF发送失败: {e}")
+                        logger.error(f"Matrix PDF 发送失败：{e}")
                 continue
 
-            logger.error(f"❌ 群 {group_id} PDF发送失败")
+            logger.error(f"❌ 群 {group_id} PDF 发送失败")
             return False
 
         except Exception as e:
-            logger.error(f"发送PDF文件到群 {group_id} 失败: {e}")
+            logger.error(f"发送 PDF 文件到群 {group_id} 失败：{e}")
             return False

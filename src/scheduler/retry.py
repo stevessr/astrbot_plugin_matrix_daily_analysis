@@ -132,7 +132,7 @@ class RetryManager:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"[RetryManager] Worker 异常: {e}", exc_info=True)
+                logger.error(f"[RetryManager] Worker 异常：{e}", exc_info=True)
                 await asyncio.sleep(1)
 
     async def _requeue_after_delay(self, task: RetryTask, delay: float):
@@ -150,7 +150,7 @@ class RetryManager:
             }
             logger.debug(f"[RetryManager] 正在重新渲染群 {task.group_id} 的图片...")
 
-            # 修改：return_url=False 获取二进制数据而不是URL
+            # 修改：return_url=False 获取二进制数据而不是 URL
             # 这对于解决 NTmatrix "Timeout" 错误至关重要，因为它避免了 matrix 客户端下载本地/内网 URL 的网络问题
             image_data = await self.html_render_func(
                 task.html_content,
@@ -170,10 +170,10 @@ class RetryManager:
                 base64_str = base64.b64encode(image_data).decode("utf-8")
                 image_file_str = f"base64://{base64_str}"
                 logger.debug(
-                    f"[RetryManager] 图片转Base64成功，长度: {len(base64_str)}"
+                    f"[RetryManager] 图片转 Base64 成功，长度：{len(base64_str)}"
                 )
             except Exception as e:
-                logger.error(f"[RetryManager] Base64编码失败: {e}")
+                logger.error(f"[RetryManager] Base64 编码失败：{e}")
                 return False
 
             # 2. 获取 Bot 实例
@@ -186,7 +186,7 @@ class RetryManager:
 
             # 3. 发送图片
             logger.info(
-                f"[RetryManager] 正在向群 {task.group_id} 发送重试图片 (Base64模式)..."
+                f"[RetryManager] 正在向群 {task.group_id} 发送重试图片 (Base64 模式)..."
             )
 
             # 使用 OneBot v11 标准 API
@@ -214,7 +214,7 @@ class RetryManager:
                         elif retcode == 1200:
                             # 即使是 Base64 也可能超时，但概率小很多
                             logger.warning(
-                                "[RetryManager] 发送失败 (retcode=1200): 消息可能过大或Bot连接不稳定"
+                                "[RetryManager] 发送失败 (retcode=1200): 消息可能过大或 Bot 连接不稳定"
                             )
                             return False
                         else:
@@ -227,7 +227,7 @@ class RetryManager:
                     )
 
                 except Exception as e:
-                    logger.error(f"[RetryManager] 发送API调用异常: {e}")
+                    logger.error(f"[RetryManager] 发送 API 调用异常：{e}")
                     return False
 
             elif hasattr(bot, "send_msg"):  # 尝试 AstrBot 抽象接口
@@ -236,7 +236,7 @@ class RetryManager:
                     await bot.send_msg(image_file_str, group_id=task.group_id)
                     return True
                 except Exception as e:
-                    logger.error(f"[RetryManager] 抽象接口发送失败: {e}")
+                    logger.error(f"[RetryManager] 抽象接口发送失败：{e}")
                     return False
 
             else:
@@ -246,7 +246,7 @@ class RetryManager:
                 return False
 
         except Exception as e:
-            logger.error(f"[RetryManager] 处理任务时发生意外错误: {e}", exc_info=True)
+            logger.error(f"[RetryManager] 处理任务时发生意外错误：{e}", exc_info=True)
             return False
 
         except Exception:
@@ -277,7 +277,7 @@ class RetryManager:
             if hasattr(bot, "self_id"):
                 bot_id = str(bot.self_id)
 
-            nickname = "AstrBot日常分析"
+            nickname = "AstrBot 日常分析"
 
             nodes = [
                 {
@@ -308,7 +308,7 @@ class RetryManager:
                     )
                 except Exception as e:
                     logger.warning(
-                        f"[RetryManager] 合并转发失败，尝试直接发送文本: {e}"
+                        f"[RetryManager] 合并转发失败，尝试直接发送文本：{e}"
                     )
                     # 回退到直接发送宽文本
                     await bot.api.call_action(
@@ -320,4 +320,4 @@ class RetryManager:
                     )
 
         except Exception as e:
-            logger.error(f"[RetryManager] 文本回退发送失败: {e}", exc_info=True)
+            logger.error(f"[RetryManager] 文本回退发送失败：{e}", exc_info=True)

@@ -17,7 +17,7 @@ class UserAnalyzer:
 
     def analyze_users(self, messages: list[dict]) -> dict[str, dict]:
         """分析用户活跃度"""
-        # 获取机器人matrix号列表用于过滤
+        # 获取机器人 matrix 号列表用于过滤
         bot_matrix_ids = self.config_manager.get_bot_matrix_ids()
 
         user_stats = defaultdict(
@@ -54,7 +54,7 @@ class UserAnalyzer:
                     text = content.get("data", {}).get("text", "")
                     user_stats[user_id]["char_count"] += len(text)
                 elif content.get("type") == "face":
-                    # matrix基础表情
+                    # matrix 基础表情
                     user_stats[user_id]["emoji_count"] += 1
                 elif content.get("type") == "mface":
                     # 动画表情/魔法表情
@@ -66,11 +66,11 @@ class UserAnalyzer:
                     # 小表情
                     user_stats[user_id]["emoji_count"] += 1
                 elif content.get("type") == "image":
-                    # 检查是否是动画表情（通过summary字段判断）
+                    # 检查是否是动画表情（通过 summary 字段判断）
                     data = content.get("data", {})
                     summary = data.get("summary", "")
                     if "动画表情" in summary or "表情" in summary:
-                        # 动画表情（以image形式发送）
+                        # 动画表情（以 image 形式发送）
                         user_stats[user_id]["emoji_count"] += 1
                 elif content.get("type") == "reply":
                     user_stats[user_id]["reply_count"] += 1
@@ -81,7 +81,7 @@ class UserAnalyzer:
         self, user_analysis: dict[str, dict], limit: int = 10
     ) -> list[dict]:
         """获取最活跃的用户"""
-        # 获取机器人matrix号列表用于过滤
+        # 获取机器人 matrix 号列表用于过滤
         bot_matrix_ids = self.config_manager.get_bot_matrix_ids()
 
         users = []

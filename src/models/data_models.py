@@ -38,7 +38,7 @@ class GoldenQuote:
 
 @dataclass
 class TokenUsage:
-    """Token使用统计"""
+    """Token 使用统计"""
 
     prompt_tokens: int = 0
     completion_tokens: int = 0
@@ -49,12 +49,12 @@ class TokenUsage:
 class EmojiStatistics:
     """表情统计数据结构"""
 
-    face_count: int = 0  # matrix基础表情数量
+    face_count: int = 0  # matrix 基础表情数量
     mface_count: int = 0  # 动画表情数量
     bface_count: int = 0  # 超级表情数量
     sface_count: int = 0  # 小表情数量
     other_emoji_count: int = 0  # 其他表情数量
-    face_details: dict = field(default_factory=dict)  # 具体表情ID统计 {face_id: count}
+    face_details: dict = field(default_factory=dict)  # 具体表情 ID 统计 {face_id: count}
 
     @property
     def total_emoji_count(self) -> int:

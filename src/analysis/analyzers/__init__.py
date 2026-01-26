@@ -1,6 +1,6 @@
 """
 分析器模块
-包含各种LLM分析功能的实现
+包含各种 LLM 分析功能的实现
 """
 
 from .base_analyzer import BaseAnalyzer

@@ -1,5 +1,5 @@
 """
-LLM分析器模块
+LLM 分析器模块
 负责协调各个分析器进行话题分析、用户称号分析和金句分析
 """
 
@@ -17,17 +17,17 @@ from .utils.llm_utils import call_provider_with_retry
 
 class LLMAnalyzer:
     """
-    LLM分析器
+    LLM 分析器
     作为统一入口，协调各个专门的分析器进行不同类型的分析
     保持向后兼容性，提供原有的接口
     """
 
     def __init__(self, context, config_manager):
         """
-        初始化LLM分析器
+        初始化 LLM 分析器
 
         Args:
-            context: AstrBot上下文对象
+            context: AstrBot 上下文对象
             config_manager: 配置管理器
         """
         self.context = context
@@ -42,21 +42,21 @@ class LLMAnalyzer:
         self, messages: list[dict], umo: str = None
     ) -> tuple[list[SummaryTopic], TokenUsage]:
         """
-        使用LLM分析话题
-        保持原有接口，委托给专门的TopicAnalyzer处理
+        使用 LLM 分析话题
+        保持原有接口，委托给专门的 TopicAnalyzer 处理
 
         Args:
             messages: 群聊消息列表
             umo: 模型唯一标识符
 
         Returns:
-            (话题列表, Token使用统计)
+            (话题列表，Token 使用统计)
         """
         try:
             logger.info("开始话题分析")
             return await self.topic_analyzer.analyze_topics(messages, umo)
         except Exception as e:
-            logger.error(f"话题分析失败: {e}")
+            logger.error(f"话题分析失败：{e}")
             return [], TokenUsage()
 
     async def analyze_user_titles(
@@ -67,17 +67,17 @@ class LLMAnalyzer:
         top_users: list[dict] = None,
     ) -> tuple[list[UserTitle], TokenUsage]:
         """
-        使用LLM分析用户称号
-        保持原有接口，委托给专门的UserTitleAnalyzer处理
+        使用 LLM 分析用户称号
+        保持原有接口，委托给专门的 UserTitleAnalyzer 处理
 
         Args:
             messages: 群聊消息列表
             user_analysis: 用户分析统计
             umo: 模型唯一标识符
-            top_users: 活跃用户列表(可选)
+            top_users: 活跃用户列表 (可选)
 
         Returns:
-            (用户称号列表, Token使用统计)
+            (用户称号列表，Token 使用统计)
         """
         try:
             logger.info("开始用户称号分析")
@@ -85,28 +85,28 @@ class LLMAnalyzer:
                 messages, user_analysis, umo, top_users
             )
         except Exception as e:
-            logger.error(f"用户称号分析失败: {e}")
+            logger.error(f"用户称号分析失败：{e}")
             return [], TokenUsage()
 
     async def analyze_golden_quotes(
         self, messages: list[dict], umo: str = None
     ) -> tuple[list[GoldenQuote], TokenUsage]:
         """
-        使用LLM分析群聊金句
-        保持原有接口，委托给专门的GoldenQuoteAnalyzer处理
+        使用 LLM 分析群聊金句
+        保持原有接口，委托给专门的 GoldenQuoteAnalyzer 处理
 
         Args:
             messages: 群聊消息列表
             umo: 模型唯一标识符
 
         Returns:
-            (金句列表, Token使用统计)
+            (金句列表，Token 使用统计)
         """
         try:
             logger.info("开始金句分析")
             return await self.golden_quote_analyzer.analyze_golden_quotes(messages, umo)
         except Exception as e:
-            logger.error(f"金句分析失败: {e}")
+            logger.error(f"金句分析失败：{e}")
             return [], TokenUsage()
 
     async def analyze_all_concurrent(
@@ -123,10 +123,10 @@ class LLMAnalyzer:
             messages: 群聊消息列表
             user_analysis: 用户分析统计
             umo: 模型唯一标识符
-            top_users: 活跃用户列表(可选)
+            top_users: 活跃用户列表 (可选)
 
         Returns:
-            (话题列表, 用户称号列表, 金句列表, 总Token使用统计)
+            (话题列表，用户称号列表，金句列表，总 Token 使用统计)
         """
         try:
             logger.info("开始并发执行所有分析任务")
@@ -148,23 +148,23 @@ class LLMAnalyzer:
 
             # 话题分析结果
             if isinstance(results[0], Exception):
-                logger.error(f"话题分析失败: {results[0]}")
+                logger.error(f"话题分析失败：{results[0]}")
             else:
                 topics, topic_usage = results[0]
 
             # 用户称号分析结果
             if isinstance(results[1], Exception):
-                logger.error(f"用户称号分析失败: {results[1]}")
+                logger.error(f"用户称号分析失败：{results[1]}")
             else:
                 user_titles, title_usage = results[1]
 
             # 金句分析结果
             if isinstance(results[2], Exception):
-                logger.error(f"金句分析失败: {results[2]}")
+                logger.error(f"金句分析失败：{results[2]}")
             else:
                 golden_quotes, quote_usage = results[2]
 
-            # 合并Token使用统计
+            # 合并 Token 使用统计
             total_usage = TokenUsage(
                 prompt_tokens=topic_usage.prompt_tokens
                 + title_usage.prompt_tokens
@@ -178,12 +178,12 @@ class LLMAnalyzer:
             )
 
             logger.info(
-                f"并发分析完成 - 话题: {len(topics)}, 称号: {len(user_titles)}, 金句: {len(golden_quotes)}"
+                f"并发分析完成 - 话题：{len(topics)}, 称号：{len(user_titles)}, 金句：{len(golden_quotes)}"
             )
             return topics, user_titles, golden_quotes, total_usage
 
         except Exception as e:
-            logger.error(f"并发分析失败: {e}")
+            logger.error(f"并发分析失败：{e}")
             return [], [], [], TokenUsage()
 
     # 向后兼容的方法，保持原有调用方式
@@ -197,19 +197,19 @@ class LLMAnalyzer:
         provider_id_key: str = None,
     ):
         """
-        向后兼容的LLM调用方法
-        现在委托给llm_utils模块处理
+        向后兼容的 LLM 调用方法
+        现在委托给 llm_utils 模块处理
 
         Args:
-            provider: LLM服务商实例或None（已弃用，现在使用 provider_id_key）
+            provider: LLM 服务商实例或 None（已弃用，现在使用 provider_id_key）
             prompt: 输入的提示语
-            max_tokens: 最大生成token数
+            max_tokens: 最大生成 token 数
             temperature: 采样温度
             umo: 指定使用的模型唯一标识符
             provider_id_key: 配置中的 provider_id 键名（可选）
 
         Returns:
-            LLM生成的结果
+            LLM 生成的结果
         """
         return await call_provider_with_retry(
             self.context,
@@ -223,13 +223,13 @@ class LLMAnalyzer:
 
     def _fix_json(self, text: str) -> str:
         """
-        向后兼容的JSON修复方法
-        现在委托给json_utils模块处理
+        向后兼容的 JSON 修复方法
+        现在委托给 json_utils 模块处理
 
         Args:
-            text: 需要修复的JSON文本
+            text: 需要修复的 JSON 文本
 
         Returns:
-            修复后的JSON文本
+            修复后的 JSON 文本
         """
         return fix_json(text)

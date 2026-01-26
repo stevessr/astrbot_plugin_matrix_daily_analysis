@@ -1,6 +1,6 @@
 """
 用户称号分析模块
-专门处理用户称号和MBTI类型分析
+专门处理用户称号和 MBTI 类型分析
 """
 
 from astrbot.api import logger
@@ -13,7 +13,7 @@ from .base_analyzer import BaseAnalyzer
 class UserTitleAnalyzer(BaseAnalyzer):
     """
     用户称号分析器
-    专门处理用户称号分配和MBTI类型分析
+    专门处理用户称号分配和 MBTI 类型分析
     """
 
     def get_provider_id_key(self) -> str:
@@ -29,7 +29,7 @@ class UserTitleAnalyzer(BaseAnalyzer):
         return self.config_manager.get_max_user_titles()
 
     def get_max_tokens(self) -> int:
-        """获取最大token数"""
+        """获取最大 token 数"""
         return self.config_manager.get_user_title_max_tokens()
 
     def get_temperature(self) -> float:
@@ -55,7 +55,7 @@ class UserTitleAnalyzer(BaseAnalyzer):
         users_text = "\n".join(
             [
                 f"- {user['name']} (matrix:{user['matrix']}): "
-                f"发言{user['message_count']}条, 平均{user['avg_chars']}字, "
+                f"发言{user['message_count']}条，平均{user['avg_chars']}字，"
                 f"表情比例{user['emoji_ratio']}, 夜间发言比例{user['night_ratio']}, "
                 f"回复比例{user['reply_ratio']}"
                 for user in user_summaries
@@ -72,9 +72,9 @@ class UserTitleAnalyzer(BaseAnalyzer):
                 logger.info("使用配置中的用户称号分析提示词")
                 return prompt
             except KeyError as e:
-                logger.warning(f"用户称号分析提示词变量格式错误: {e}")
+                logger.warning(f"用户称号分析提示词变量格式错误：{e}")
             except Exception as e:
-                logger.warning(f"应用用户称号分析提示词失败: {e}")
+                logger.warning(f"应用用户称号分析提示词失败：{e}")
 
         logger.warning("未找到有效的用户称号分析提示词配置，请检查配置文件")
         return ""
@@ -84,7 +84,7 @@ class UserTitleAnalyzer(BaseAnalyzer):
         使用正则表达式提取用户称号信息
 
         Args:
-            result_text: LLM响应文本
+            result_text: LLM 响应文本
             max_count: 最大提取数量
 
         Returns:
@@ -100,7 +100,7 @@ class UserTitleAnalyzer(BaseAnalyzer):
             titles_data: 原始用户称号数据列表
 
         Returns:
-            UserTitle对象列表
+            UserTitle 对象列表
         """
         try:
             titles = []
@@ -116,14 +116,14 @@ class UserTitleAnalyzer(BaseAnalyzer):
 
                 # 验证必要字段
                 if not name or not title or not mbti or not reason:
-                    logger.warning(f"用户称号数据格式不完整，跳过: {title_data}")
+                    logger.warning(f"用户称号数据格式不完整，跳过：{title_data}")
                     continue
 
-                # 验证matrix号格式（单个用户matrix号）
+                # 验证 matrix 号格式（单个用户 matrix 号）
                 try:
                     matrix = int(matrix)
                 except (ValueError, TypeError):
-                    logger.warning(f"matrix号格式无效，跳过: {matrix}")
+                    logger.warning(f"matrix 号格式无效，跳过：{matrix}")
                     continue
 
                 titles.append(
@@ -133,7 +133,7 @@ class UserTitleAnalyzer(BaseAnalyzer):
             return titles
 
         except Exception as e:
-            logger.error(f"创建用户称号对象失败: {e}")
+            logger.error(f"创建用户称号对象失败：{e}")
             return []
 
     def prepare_user_data(
@@ -145,26 +145,26 @@ class UserTitleAnalyzer(BaseAnalyzer):
         Args:
             messages: 群聊消息列表
             user_analysis: 用户分析统计
-            top_users: 活跃用户列表(从get_top_users获取)
+            top_users: 活跃用户列表 (从 get_top_users 获取)
 
         Returns:
             准备好的用户数据字典
         """
         try:
-            # 获取机器人matrix号列表用于过滤
+            # 获取机器人 matrix 号列表用于过滤
             bot_matrix_ids = self.config_manager.get_bot_matrix_ids()
 
             user_summaries = []
 
-            # 如果提供了top_users列表,只分析这些活跃用户
+            # 如果提供了 top_users 列表，只分析这些活跃用户
             if top_users:
                 logger.info(
-                    f"使用get_top_users筛选出的 {len(top_users)} 个活跃用户进行称号分析"
+                    f"使用 get_top_users 筛选出的 {len(top_users)} 个活跃用户进行称号分析"
                 )
                 target_user_ids = {str(user["user_id"]) for user in top_users}
             else:
-                # 兼容旧逻辑:如果没有提供top_users,则使用所有消息数>=5的用户
-                logger.info("未提供活跃用户列表,使用消息数>=5的用户")
+                # 兼容旧逻辑：如果没有提供 top_users，则使用所有消息数>=5 的用户
+                logger.info("未提供活跃用户列表，使用消息数>=5 的用户")
                 target_user_ids = {
                     user_id
                     for user_id, stats in user_analysis.items()
@@ -174,7 +174,7 @@ class UserTitleAnalyzer(BaseAnalyzer):
             for user_id, stats in user_analysis.items():
                 # 过滤机器人自己的消息
                 if bot_matrix_ids and str(user_id) in [str(matrix) for matrix in bot_matrix_ids]:
-                    logger.debug(f"过滤掉机器人matrix号: {user_id}")
+                    logger.debug(f"过滤掉机器人 matrix 号：{user_id}")
                     continue
 
                 # 只处理活跃用户
@@ -220,7 +220,7 @@ class UserTitleAnalyzer(BaseAnalyzer):
             return {"user_summaries": user_summaries}
 
         except Exception as e:
-            logger.error(f"准备用户数据失败: {e}")
+            logger.error(f"准备用户数据失败：{e}")
             return {"user_summaries": []}
 
     async def analyze_user_titles(
@@ -237,13 +237,13 @@ class UserTitleAnalyzer(BaseAnalyzer):
             messages: 群聊消息列表
             user_analysis: 用户分析统计
             umo: 模型唯一标识符
-            top_users: 活跃用户列表(从get_top_users获取,可选)
+            top_users: 活跃用户列表 (从 get_top_users 获取，可选)
 
         Returns:
-            (用户称号列表, Token使用统计)
+            (用户称号列表，Token 使用统计)
         """
         try:
-            # 准备用户数据,传入活跃用户列表
+            # 准备用户数据，传入活跃用户列表
             user_data = self.prepare_user_data(messages, user_analysis, top_users)
 
             if not user_data["user_summaries"]:
@@ -254,5 +254,5 @@ class UserTitleAnalyzer(BaseAnalyzer):
             return await self.analyze(user_data, umo)
 
         except Exception as e:
-            logger.error(f"用户称号分析失败: {e}")
+            logger.error(f"用户称号分析失败：{e}")
             return [], TokenUsage()

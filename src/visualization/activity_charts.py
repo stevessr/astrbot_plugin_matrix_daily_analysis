@@ -65,7 +65,7 @@ class ActivityVisualizer:
             )
         user_ranking.sort(key=lambda x: x["message_count"], reverse=True)
 
-        # 找出高峰时段（活跃度最高的3个小时）
+        # 找出高峰时段（活跃度最高的 3 个小时）
         peak_hours = sorted(hourly_activity.items(), key=lambda x: x[1], reverse=True)[
             :3
         ]
@@ -74,7 +74,7 @@ class ActivityVisualizer:
         return ActivityVisualization(
             hourly_activity=dict(hourly_activity),
             daily_activity={},  # 不使用日期分析
-            user_activity_ranking=user_ranking[:10],  # 前10名
+            user_activity_ranking=user_ranking[:10],  # 前 10 名
             peak_hours=peak_hours,
             activity_heatmap_data=self._generate_hourly_heatmap_data(
                 hourly_activity, emoji_activity

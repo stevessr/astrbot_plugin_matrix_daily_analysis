@@ -109,8 +109,8 @@ async def main():
         },
         "topics": [
             {
-                "topic": "AstrBot新功能",
-                "detail": "大家对PDF生成功能的讨论非常热烈，提出了很多优化建议。",
+                "topic": "AstrBot 新功能",
+                "detail": "大家对 PDF 生成功能的讨论非常热烈，提出了很多优化建议。",
                 "contributors": ["开发者", "测试员"],
             },
             {
@@ -120,18 +120,18 @@ async def main():
             },
             {
                 "topic": "代码调试",
-                "detail": "关于Python异步编程的深入探讨。",
+                "detail": "关于 Python 异步编程的深入探讨。",
                 "contributors": ["小白", "大神"],
             },
             {
                 "topic": "美食分享",
                 "detail": "深夜放毒，发了很多火锅和烧烤的照片。",
-                "contributors": ["吃货A", "吃货B"],
+                "contributors": ["吃货 A", "吃货 B"],
             },
             {
                 "topic": "模组推荐",
-                "detail": "推荐了一些好用的Minecraft模组。",
-                "contributors": ["MC玩家"],
+                "detail": "推荐了一些好用的 Minecraft 模组。",
+                "contributors": ["MC 玩家"],
             },
         ],
         "user_titles": [

@@ -28,7 +28,7 @@ class BaseAnalyzer(ABC):
         初始化基础分析器
 
         Args:
-            context: AstrBot上下文对象
+            context: AstrBot 上下文对象
             config_manager: 配置管理器
         """
         self.context = context
@@ -67,7 +67,7 @@ class BaseAnalyzer(ABC):
     @abstractmethod
     def build_prompt(self, data: Any) -> str:
         """
-        构建LLM提示词
+        构建 LLM 提示词
 
         Args:
             data: 输入数据
@@ -83,7 +83,7 @@ class BaseAnalyzer(ABC):
         使用正则表达式提取数据
 
         Args:
-            result_text: LLM响应文本
+            result_text: LLM 响应文本
             max_count: 最大提取数量
 
         Returns:
@@ -113,34 +113,34 @@ class BaseAnalyzer(ABC):
             umo: 模型唯一标识符
 
         Returns:
-            (分析结果列表, Token使用统计)
+            (分析结果列表，Token 使用统计)
         """
         try:
             # 1. 构建提示词
             logger.debug(
-                f"{self.get_data_type()}分析开始构建prompt，输入数据类型: {type(data)}"
+                f"{self.get_data_type()}分析开始构建 prompt，输入数据类型：{type(data)}"
             )
             logger.debug(
-                f"{self.get_data_type()}分析输入数据长度: {len(data) if hasattr(data, '__len__') else 'N/A'}"
+                f"{self.get_data_type()}分析输入数据长度：{len(data) if hasattr(data, '__len__') else 'N/A'}"
             )
 
             prompt = self.build_prompt(data)
             logger.info(f"开始{self.get_data_type()}分析，构建提示词完成")
             logger.debug(
-                f"{self.get_data_type()}分析prompt长度: {len(prompt) if prompt else 0}"
+                f"{self.get_data_type()}分析 prompt 长度：{len(prompt) if prompt else 0}"
             )
             logger.debug(
-                f"{self.get_data_type()}分析prompt前100字符: {prompt[:100] if prompt else 'None'}..."
+                f"{self.get_data_type()}分析 prompt 前 100 字符：{prompt[:100] if prompt else 'None'}..."
             )
 
             # 检查 prompt 是否为空
             if not prompt or not prompt.strip():
                 logger.warning(
-                    f"{self.get_data_type()}分析: prompt 为空或只包含空白字符，跳过LLM调用"
+                    f"{self.get_data_type()}分析：prompt 为空或只包含空白字符，跳过 LLM 调用"
                 )
                 return [], TokenUsage()
 
-            # 2. 调用LLM（使用配置的 provider）
+            # 2. 调用 LLM（使用配置的 provider）
             max_tokens = self.get_max_tokens()
             temperature = self.get_temperature()
             provider_id_key = self.get_provider_id_key()
@@ -157,11 +157,11 @@ class BaseAnalyzer(ABC):
 
             if response is None:
                 logger.error(
-                    f"{self.get_data_type()}分析调用LLM失败: provider返回None（重试失败）"
+                    f"{self.get_data_type()}分析调用 LLM 失败：provider 返回 None（重试失败）"
                 )
                 return [], TokenUsage()
 
-            # 3. 提取token使用统计
+            # 3. 提取 token 使用统计
             token_usage_dict = extract_token_usage(response)
             token_usage = TokenUsage(
                 prompt_tokens=token_usage_dict["prompt_tokens"],
@@ -171,24 +171,24 @@ class BaseAnalyzer(ABC):
 
             # 4. 提取响应文本
             result_text = extract_response_text(response)
-            logger.debug(f"{self.get_data_type()}分析原始响应: {result_text[:500]}...")
+            logger.debug(f"{self.get_data_type()}分析原始响应：{result_text[:500]}...")
 
-            # 5. 尝试JSON解析
+            # 5. 尝试 JSON 解析
             success, parsed_data, error_msg = parse_json_response(
                 result_text, self.get_data_type()
             )
 
             if success and parsed_data:
-                # JSON解析成功，创建数据对象
+                # JSON 解析成功，创建数据对象
                 data_objects = self.create_data_objects(parsed_data)
                 logger.info(
                     f"{self.get_data_type()}分析成功，解析到 {len(data_objects)} 条数据"
                 )
                 return data_objects, token_usage
 
-            # 6. JSON解析失败，使用正则表达式降级
+            # 6. JSON 解析失败，使用正则表达式降级
             logger.warning(
-                f"{self.get_data_type()}JSON解析失败，尝试正则表达式提取: {error_msg}"
+                f"{self.get_data_type()}JSON 解析失败，尝试正则表达式提取：{error_msg}"
             )
             regex_data = self.extract_with_regex(result_text, self.get_max_count())
 
@@ -201,20 +201,20 @@ class BaseAnalyzer(ABC):
             else:
                 # 最后的降级方案 - 两种方法都失败
                 logger.error(
-                    f"{self.get_data_type()}分析失败: JSON解析和正则表达式提取均未成功，返回空列表"
+                    f"{self.get_data_type()}分析失败：JSON 解析和正则表达式提取均未成功，返回空列表"
                 )
                 return [], token_usage
 
         except Exception as e:
-            logger.error(f"{self.get_data_type()}分析失败: {e}", exc_info=True)
+            logger.error(f"{self.get_data_type()}分析失败：{e}", exc_info=True)
             return [], TokenUsage()
 
     def get_max_tokens(self) -> int:
         """
-        获取最大token数，子类可重写
+        获取最大 token 数，子类可重写
 
         Returns:
-            最大token数
+            最大 token 数
         """
         return 10000
 

@@ -1,6 +1,6 @@
 """
 工具函数模块
-包含PDF处理和通用工具函数
+包含 PDF 处理和通用工具函数
 """
 
 from .helpers import MessageAnalyzer

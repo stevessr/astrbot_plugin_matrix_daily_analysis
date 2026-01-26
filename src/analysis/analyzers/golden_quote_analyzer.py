@@ -32,7 +32,7 @@ class GoldenQuoteAnalyzer(BaseAnalyzer):
         return self.config_manager.get_max_golden_quotes()
 
     def get_max_tokens(self) -> int:
-        """获取最大token数"""
+        """获取最大 token 数"""
         return self.config_manager.get_golden_quote_max_tokens()
 
     def get_temperature(self) -> float:
@@ -71,9 +71,9 @@ class GoldenQuoteAnalyzer(BaseAnalyzer):
                 logger.info("使用配置中的金句分析提示词")
                 return prompt
             except KeyError as e:
-                logger.warning(f"金句分析提示词变量格式错误: {e}")
+                logger.warning(f"金句分析提示词变量格式错误：{e}")
             except Exception as e:
-                logger.warning(f"应用金句分析提示词失败: {e}")
+                logger.warning(f"应用金句分析提示词失败：{e}")
 
         logger.warning("未找到有效的金句分析提示词配置，请检查配置文件")
         return ""
@@ -83,7 +83,7 @@ class GoldenQuoteAnalyzer(BaseAnalyzer):
         使用正则表达式提取金句信息
 
         Args:
-            result_text: LLM响应文本
+            result_text: LLM 响应文本
             max_count: 最大提取数量
 
         Returns:
@@ -99,7 +99,7 @@ class GoldenQuoteAnalyzer(BaseAnalyzer):
             quotes_data: 原始金句数据列表
 
         Returns:
-            GoldenQuote对象列表
+            GoldenQuote 对象列表
         """
         try:
             quotes = []
@@ -113,7 +113,7 @@ class GoldenQuoteAnalyzer(BaseAnalyzer):
 
                 # 验证必要字段
                 if not content or not sender or not reason:
-                    logger.warning(f"金句数据格式不完整，跳过: {quote_data}")
+                    logger.warning(f"金句数据格式不完整，跳过：{quote_data}")
                     continue
 
                 quotes.append(
@@ -123,7 +123,7 @@ class GoldenQuoteAnalyzer(BaseAnalyzer):
             return quotes
 
         except Exception as e:
-            logger.error(f"创建金句对象失败: {e}")
+            logger.error(f"创建金句对象失败：{e}")
             return []
 
     def extract_interesting_messages(self, messages: list[dict]) -> list[dict]:
@@ -163,7 +163,7 @@ class GoldenQuoteAnalyzer(BaseAnalyzer):
             return interesting_messages
 
         except Exception as e:
-            logger.error(f"提取圣经消息失败: {e}")
+            logger.error(f"提取圣经消息失败：{e}")
             return []
 
     async def analyze_golden_quotes(
@@ -177,7 +177,7 @@ class GoldenQuoteAnalyzer(BaseAnalyzer):
             umo: 模型唯一标识符
 
         Returns:
-            (金句列表, Token使用统计)
+            (金句列表，Token 使用统计)
         """
         try:
             # 提取圣经的文本消息
@@ -191,7 +191,7 @@ class GoldenQuoteAnalyzer(BaseAnalyzer):
             logger.info(f"开始从 {len(interesting_messages)} 条圣经消息中提取金句")
             quotes, usage = await self.analyze(interesting_messages, umo)
 
-            # 回填matrix号
+            # 回填 matrix 号
             for quote in quotes:
                 for msg in interesting_messages:
                     # 尝试匹配内容和发送者
@@ -206,5 +206,5 @@ class GoldenQuoteAnalyzer(BaseAnalyzer):
             return quotes, usage
 
         except Exception as e:
-            logger.error(f"金句分析失败: {e}")
+            logger.error(f"金句分析失败：{e}")
             return [], TokenUsage()

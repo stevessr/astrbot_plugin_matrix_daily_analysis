@@ -80,15 +80,15 @@ async def debug_render(
                 matrix=123456789,
             ),
             GoldenQuote(
-                content="这个Bug我不修，它就是个Feature。",
+                content="这个 Bug 我不修，它就是个 Feature。",
                 sender="李四",
                 reason="经典的开发辩解",
                 matrix=987654321,
             ),
             GoldenQuote(
-                content="PHP是世界上最好的语言！",
+                content="PHP 是世界上最好的语言！",
                 sender="王五",
-                reason="引发了长达3小时的群聊大讨论",
+                reason="引发了长达 3 小时的群聊大讨论",
                 matrix=112233445,
             ),
         ],
@@ -106,9 +106,9 @@ async def debug_render(
 
     topics = [
         SummaryTopic(
-            topic="关于AstrBot插件开发的讨论",
+            topic="关于 AstrBot 插件开发的讨论",
             contributors=["张三", "李四", "王五"],
-            detail="大家深入探讨了如何利用Jinja2模板渲染出精美的分析报告，并分享了调试技巧。",
+            detail="大家深入探讨了如何利用 Jinja2 模板渲染出精美的分析报告，并分享了调试技巧。",
         ),
         SummaryTopic(
             topic="午餐吃什么的终极哲学问题",
@@ -116,7 +116,7 @@ async def debug_render(
             detail="群友们就黄焖鸡米饭和螺蛳粉的优劣进行了长达一小时的辩论，最终未能达成共识。",
         ),
         SummaryTopic(
-            topic="新出的3A大作测评",
+            topic="新出的 3A 大作测评",
             contributors=["周八", "吴九"],
             detail="分享了最新游戏的通关体验，讨论了画面表现和剧情走向。",
         ),
@@ -128,7 +128,7 @@ async def debug_render(
             matrix=123456789,
             title="代码收割机",
             mbti="INTJ",
-            reason="在短短一小时内提交了10个PR，效率惊人。",
+            reason="在短短一小时内提交了 10 个 PR，效率惊人。",
         ),
         UserTitle(
             name="李四",

@@ -25,7 +25,7 @@ class MessageAnalyzer:
         self.user_analyzer = UserAnalyzer(config_manager)
 
     def _extract_bot_matrix_id_from_instance(self, bot_instance):
-        """从bot实例中提取matrix号（单个）"""
+        """从 bot 实例中提取 matrix 号（单个）"""
         if hasattr(bot_instance, "self_id") and bot_instance.self_id:
             return str(bot_instance.self_id)
         elif hasattr(bot_instance, "matrix") and bot_instance.matrix:
@@ -35,14 +35,14 @@ class MessageAnalyzer:
         return None
 
     async def set_bot_instance(self, bot_instance, platform_id=None):
-        """设置bot实例（保持向后兼容）"""
+        """设置 bot 实例（保持向后兼容）"""
         if self.bot_manager:
             self.bot_manager.set_bot_instance(bot_instance, platform_id)
         else:
-            # 从bot实例提取matrix号并设置为列表
+            # 从 bot 实例提取 matrix 号并设置为列表
             bot_matrix_id = self._extract_bot_matrix_id_from_instance(bot_instance)
             if bot_matrix_id:
-                # 将单个matrix号转换为列表，保持统一处理
+                # 将单个 matrix 号转换为列表，保持统一处理
                 await self.message_handler.set_bot_matrix_ids([bot_matrix_id])
 
     async def analyze_messages(
@@ -60,16 +60,16 @@ class MessageAnalyzer:
                 self.user_analyzer.analyze_users, messages
             )
 
-            # 获取活跃用户列表 - 使用get_top_users方法,limit从配置中读取
+            # 获取活跃用户列表 - 使用 get_top_users 方法，limit 从配置中读取
             max_user_titles = self.config_manager.get_max_user_titles()
             top_users = self.user_analyzer.get_top_users(
                 user_analysis, limit=max_user_titles
             )
             logger.info(
-                f"获取到 {len(top_users)} 个活跃用户用于称号分析(配置上限: {max_user_titles})"
+                f"获取到 {len(top_users)} 个活跃用户用于称号分析 (配置上限：{max_user_titles})"
             )
 
-            # LLM分析 - 使用并发方式
+            # LLM 分析 - 使用并发方式
             topics = []
             user_titles = []
             golden_quotes = []
@@ -147,5 +147,5 @@ class MessageAnalyzer:
             }
 
         except Exception as e:
-            logger.error(f"消息分析失败: {e}")
+            logger.error(f"消息分析失败：{e}")
             return None

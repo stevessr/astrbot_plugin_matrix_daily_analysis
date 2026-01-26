@@ -21,7 +21,7 @@ class MessageHandler:
         self.bot_manager = bot_manager
 
     async def set_bot_matrix_ids(self, bot_matrix_ids):
-        """设置机器人matrix号（支持单个matrix号或matrix号列表）"""
+        """设置机器人 matrix 号（支持单个 matrix 号或 matrix 号列表）"""
         try:
             if self.bot_manager:
                 # 确保传入的是列表，保持统一处理
@@ -29,16 +29,16 @@ class MessageHandler:
                     self.bot_manager.set_bot_matrix_ids(bot_matrix_ids)
                 elif bot_matrix_ids:
                     self.bot_manager.set_bot_matrix_ids([bot_matrix_ids])
-            logger.info(f"设置机器人matrix号: {bot_matrix_ids}")
+            logger.info(f"设置机器人 matrix 号：{bot_matrix_ids}")
         except Exception as e:
-            logger.error(f"设置机器人matrix号失败: {e}")
+            logger.error(f"设置机器人 matrix 号失败：{e}")
 
     def set_bot_manager(self, bot_manager):
-        """设置bot管理器"""
+        """设置 bot 管理器"""
         self.bot_manager = bot_manager
 
     def _extract_bot_matrix_id_from_instance(self, bot_instance):
-        """从bot实例中提取matrix号（单个）"""
+        """从 bot 实例中提取 matrix 号（单个）"""
         if hasattr(bot_instance, "self_id") and bot_instance.self_id:
             return str(bot_instance.self_id)
         elif hasattr(bot_instance, "matrix") and bot_instance.matrix:
@@ -57,12 +57,12 @@ class MessageHandler:
                 logger.error(f"群 {group_id} 参数无效")
                 return []
 
-            # 确保bot_manager有matrix号列表用于过滤
+            # 确保 bot_manager 有 matrix 号列表用于过滤
             if self.bot_manager and not self.bot_manager.has_bot_matrix_id():
-                # 尝试从bot_instance提取matrix号并设置为列表
+                # 尝试从 bot_instance 提取 matrix 号并设置为列表
                 bot_matrix_id = self._extract_bot_matrix_id_from_instance(bot_instance)
                 if bot_matrix_id:
-                    # 将单个matrix号转换为列表，保持统一处理
+                    # 将单个 matrix 号转换为列表，保持统一处理
                     self.bot_manager.set_bot_matrix_ids([bot_matrix_id])
 
             # 计算时间范围
@@ -71,14 +71,14 @@ class MessageHandler:
 
             logger.info(f"开始获取群 {group_id} 近 {days} 天的消息记录")
             logger.info(
-                f"时间范围: {start_time.strftime('%Y-%m-%d %H:%M:%S')} 到 {end_time.strftime('%Y-%m-%d %H:%M:%S')}"
+                f"时间范围：{start_time.strftime('%Y-%m-%d %H:%M:%S')} 到 {end_time.strftime('%Y-%m-%d %H:%M:%S')}"
             )
 
             # 仅支持 Matrix 平台
             return await self._fetch_matrix_messages(bot_instance, group_id, days, start_time, end_time)
 
         except Exception as e:
-            logger.error(f"群 {group_id} 获取群聊消息记录失败: {e}", exc_info=True)
+            logger.error(f"群 {group_id} 获取群聊消息记录失败：{e}", exc_info=True)
             return []
 
     async def _fetch_matrix_messages(
@@ -108,7 +108,7 @@ class MessageHandler:
                             if user_id and displayname:
                                 display_names[user_id] = displayname
             except Exception as e:
-                logger.warning(f"获取群成员列表失败，将无法显示昵称: {e}")
+                logger.warning(f"获取群成员列表失败，将无法显示昵称：{e}")
 
             # 使用 room_messages 获取历史消息
             # direction='b' (backwards), limit=config.max_messages
@@ -181,7 +181,7 @@ class MessageHandler:
                 return []
 
         except Exception as e:
-            logger.error(f"Matrix 获取消息失败: {e}", exc_info=True)
+            logger.error(f"Matrix 获取消息失败：{e}", exc_info=True)
             return []
 
     def calculate_statistics(self, messages: list[dict]) -> GroupStatistics:
@@ -205,7 +205,7 @@ class MessageHandler:
                     text = content.get("data", {}).get("text", "")
                     total_chars += len(text)
                 elif content.get("type") == "face":
-                    # matrix基础表情
+                    # matrix 基础表情
                     emoji_statistics.face_count += 1
                     face_id = content.get("data", {}).get("id", "unknown")
                     emoji_statistics.face_details[f"face_{face_id}"] = (
@@ -233,11 +233,11 @@ class MessageHandler:
                         emoji_statistics.face_details.get(f"sface_{emoji_id}", 0) + 1
                     )
                 elif content.get("type") == "image":
-                    # 检查是否是动画表情（通过summary字段判断）
+                    # 检查是否是动画表情（通过 summary 字段判断）
                     data = content.get("data", {})
                     summary = data.get("summary", "")
                     if "动画表情" in summary or "表情" in summary:
-                        # 动画表情（以image形式发送）
+                        # 动画表情（以 image 形式发送）
                         emoji_statistics.mface_count += 1
                         file_name = data.get("file", "unknown")
                         emoji_statistics.face_details[f"animated_{file_name}"] = (

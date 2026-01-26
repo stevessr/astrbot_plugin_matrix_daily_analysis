@@ -1,6 +1,6 @@
 """
 配置管理模块
-负责处理插件配置和PDF依赖检查
+负责处理插件配置和 PDF 依赖检查
 """
 
 import sys
@@ -32,7 +32,7 @@ class ConfigManager:
         if mode not in ("whitelist", "blacklist", "none"):
             mode = "none"
 
-        # none模式下，不进行黑白名单检查，由调用方决定（通常是回退到 enabled_groups）
+        # none 模式下，不进行黑白名单检查，由调用方决定（通常是回退到 enabled_groups）
         if mode == "none":
             return True
 
@@ -99,27 +99,27 @@ class ConfigManager:
         return self.config.get("max_golden_quotes", 5)
 
     def get_llm_timeout(self) -> int:
-        """获取LLM请求超时时间（秒）"""
+        """获取 LLM 请求超时时间（秒）"""
         return self.config.get("llm_timeout", 30)
 
     def get_llm_retries(self) -> int:
-        """获取LLM请求重试次数"""
+        """获取 LLM 请求重试次数"""
         return self.config.get("llm_retries", 2)
 
     def get_llm_backoff(self) -> int:
-        """获取LLM请求重试退避基值（秒），实际退避会乘以尝试次数"""
+        """获取 LLM 请求重试退避基值（秒），实际退避会乘以尝试次数"""
         return self.config.get("llm_backoff", 2)
 
     def get_topic_max_tokens(self) -> int:
-        """获取话题分析最大token数"""
+        """获取话题分析最大 token 数"""
         return self.config.get("topic_max_tokens", 12288)
 
     def get_golden_quote_max_tokens(self) -> int:
-        """获取金句分析最大token数"""
+        """获取金句分析最大 token 数"""
         return self.config.get("golden_quote_max_tokens", 4096)
 
     def get_user_title_max_tokens(self) -> int:
-        """获取用户称号分析最大token数"""
+        """获取用户称号分析最大 token 数"""
         return self.config.get("user_title_max_tokens", 4096)
 
     def get_llm_provider_id(self) -> str:
@@ -139,7 +139,7 @@ class ConfigManager:
         return self.config.get("golden_quote_provider_id", "")
 
     def get_pdf_output_dir(self) -> str:
-        """获取PDF输出目录"""
+        """获取 PDF 输出目录"""
         try:
             plugin_name = "astrbot_plugin_matrix_daily_analysis"
             data_path = get_astrbot_data_path()
@@ -150,11 +150,11 @@ class ConfigManager:
             return "data/plugins/astrbot_plugin_matrix_daily_analysis/reports"
 
     def get_bot_matrix_ids(self) -> list:
-        """获取bot matrix号列表"""
+        """获取 bot matrix 号列表"""
         return self.config.get("bot_matrix_ids", [])
 
     def get_pdf_filename_format(self) -> str:
-        """获取PDF文件名格式"""
+        """获取 PDF 文件名格式"""
         return self.config.get(
             "pdf_filename_format", "群聊分析报告_{group_id}_{date}.pdf"
         )
@@ -310,7 +310,7 @@ class ConfigManager:
 
 
     def set_pdf_filename_format(self, format_str: str):
-        """设置PDF文件名格式"""
+        """设置 PDF 文件名格式"""
         self.config["pdf_filename_format"] = format_str
         self.config.save_config()
 
@@ -329,12 +329,12 @@ class ConfigManager:
 
     @property
     def playwright_available(self) -> bool:
-        """检查playwright是否可用"""
+        """检查 playwright 是否可用"""
         return self._playwright_available
 
     @property
     def playwright_version(self) -> str | None:
-        """获取playwright版本"""
+        """获取 playwright 版本"""
         return self._playwright_version
 
     def _check_playwright_availability(self):
@@ -384,7 +384,7 @@ class ConfigManager:
             modules_to_remove = [
                 mod for mod in sys.modules.keys() if mod.startswith("playwright")
             ]
-            logger.info(f"移除模块: {modules_to_remove}")
+            logger.info(f"移除模块：{modules_to_remove}")
             for mod in modules_to_remove:
                 del sys.modules[mod]
 
@@ -398,7 +398,7 @@ class ConfigManager:
                 try:
                     self._playwright_version = playwright.__version__
                     logger.info(
-                        f"重新加载成功，playwright 版本: {self._playwright_version}"
+                        f"重新加载成功，playwright 版本：{self._playwright_version}"
                     )
                 except AttributeError:
                     self._playwright_version = "unknown"
@@ -418,23 +418,23 @@ class ConfigManager:
                 return False
 
         except Exception as e:
-            logger.error(f"重新加载 playwright 时出错: {e}")
+            logger.error(f"重新加载 playwright 时出错：{e}")
             return False
 
     def save_config(self):
-        """保存配置到AstrBot配置系统"""
+        """保存配置到 AstrBot 配置系统"""
         try:
             self.config.save_config()
             logger.info("配置已保存")
         except Exception as e:
-            logger.error(f"保存配置失败: {e}")
+            logger.error(f"保存配置失败：{e}")
 
     def reload_config(self):
         """重新加载配置"""
         try:
-            # 重新从AstrBot配置系统读取所有配置
+            # 重新从 AstrBot 配置系统读取所有配置
             logger.info("重新加载配置...")
-            # 配置会自动从self.config中重新读取
+            # 配置会自动从 self.config 中重新读取
             logger.info("配置重载完成")
         except Exception as e:
-            logger.error(f"重新加载配置失败: {e}")
+            logger.error(f"重新加载配置失败：{e}")

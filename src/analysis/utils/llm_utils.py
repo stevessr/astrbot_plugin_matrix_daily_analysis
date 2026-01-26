@@ -1,6 +1,6 @@
 """
-LLM API请求处理工具模块
-提供LLM调用和token统计功能
+LLM API 请求处理工具模块
+提供 LLM 调用和 token 统计功能
 """
 
 import asyncio
@@ -16,7 +16,7 @@ async def _try_get_provider_id_by_id(
     尝试通过 ID 获取 Provider ID 的辅助函数
 
     Args:
-        context: AstrBot上下文对象
+        context: AstrBot 上下文对象
         provider_id: Provider ID
         description: 描述信息，用于日志
 
@@ -44,7 +44,7 @@ async def _try_get_session_provider_id(context, umo: str) -> str | None:
     尝试获取会话 Provider ID 的辅助函数
 
     Args:
-        context: AstrBot上下文对象
+        context: AstrBot 上下文对象
         umo: unified_msg_origin
 
     Returns:
@@ -66,7 +66,7 @@ async def _try_get_first_available_provider_id(context) -> str | None:
     尝试获取第一个可用 Provider ID 的辅助函数
 
     Args:
-        context: AstrBot上下文对象
+        context: AstrBot 上下文对象
 
     Returns:
         Provider ID 或 None
@@ -100,7 +100,7 @@ async def get_provider_id_with_fallback(
     4. 回退到第一个可用的 Provider
 
     Args:
-        context: AstrBot上下文对象
+        context: AstrBot 上下文对象
         config_manager: 配置管理器
         provider_id_key: 配置中的 provider_id 键名（如 'topic_provider_id'）
         umo: unified_msg_origin，用于获取会话默认 Provider
@@ -109,7 +109,7 @@ async def get_provider_id_with_fallback(
         Provider ID 或 None
     """
     try:
-        # 输出Provider选择开始日志
+        # 输出 Provider 选择开始日志
         task_desc = provider_id_key if provider_id_key else "默认任务"
         logger.info(f"[Provider 选择] 开始为 {task_desc} 选择 Provider...")
 
@@ -164,7 +164,7 @@ async def get_provider_id_with_fallback(
         return None
 
     except Exception as e:
-        logger.error(f"[Provider 选择] ✗ 异常：Provider 选择过程出错: {e}")
+        logger.error(f"[Provider 选择] ✗ 异常：Provider 选择过程出错：{e}")
         return None
 
 
@@ -178,19 +178,19 @@ async def call_provider_with_retry(
     provider_id_key: str = None,
 ) -> Any | None:
     """
-    调用LLM提供者，带超时、重试与退避。支持自定义服务商和配置化 Provider 选择。
+    调用 LLM 提供者，带超时、重试与退避。支持自定义服务商和配置化 Provider 选择。
 
     Args:
-        context: AstrBot上下文对象
+        context: AstrBot 上下文对象
         config_manager: 配置管理器
         prompt: 输入的提示语
-        max_tokens: 最大生成token数
+        max_tokens: 最大生成 token 数
         temperature: 采样温度
         umo: 指定使用的模型唯一标识符
         provider_id_key: 配置中的 provider_id 键名（如 'topic_provider_id'），用于选择特定的 Provider
 
     Returns:
-        LLM生成的结果，失败时返回None
+        LLM 生成的结果，失败时返回 None
     """
     timeout = config_manager.get_llm_timeout()
     retries = config_manager.get_llm_retries()
@@ -211,11 +211,11 @@ async def call_provider_with_retry(
             logger.info(
                 f"[LLM 调用] 使用 Provider ID: {provider_id} | "
                 f"max_tokens={max_tokens} | temperature={temperature} | "
-                f"prompt长度={len(prompt) if prompt else 0}字符"
+                f"prompt 长度={len(prompt) if prompt else 0}字符"
             )
 
             logger.debug(
-                f"[LLM 调用] Prompt 前100字符: {prompt[:100] if prompt else 'None'}..."
+                f"[LLM 调用] Prompt 前 100 字符：{prompt[:100] if prompt else 'None'}..."
             )
 
             # 检查 prompt 是否为空
@@ -244,28 +244,28 @@ async def call_provider_with_retry(
 
         except asyncio.TimeoutError as e:
             last_exc = e
-            logger.warning(f"LLM请求超时: 第{attempt}次, timeout={timeout}s")
+            logger.warning(f"LLM 请求超时：第{attempt}次，timeout={timeout}s")
         except Exception as e:
             last_exc = e
-            logger.warning(f"LLM请求失败: 第{attempt}次, 错误: {last_exc}")
+            logger.warning(f"LLM 请求失败：第{attempt}次，错误：{last_exc}")
         # 若非最后一次，等待退避后重试
         if attempt < retries:
             await asyncio.sleep(backoff * attempt)
 
     # 最终仍失败，记录错误并返回 None 由调用方处理降级，避免抛出异常
-    logger.error(f"LLM请求全部重试失败: {last_exc}")
+    logger.error(f"LLM 请求全部重试失败：{last_exc}")
     return None
 
 
 def extract_token_usage(response) -> dict | None:
     """
-    从LLM响应中提取token使用统计
+    从 LLM 响应中提取 token 使用统计
 
     Args:
-        response: LLM响应对象
+        response: LLM 响应对象
 
     Returns:
-        Token使用统计字典，包含prompt_tokens, completion_tokens, total_tokens
+        Token 使用统计字典，包含 prompt_tokens, completion_tokens, total_tokens
     """
     try:
         token_usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
@@ -294,16 +294,16 @@ def extract_token_usage(response) -> dict | None:
         return token_usage
 
     except Exception as e:
-        logger.error(f"提取token使用统计失败: {e}")
+        logger.error(f"提取 token 使用统计失败：{e}")
         return {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
 
 
 def extract_response_text(response) -> str:
     """
-    从LLM响应中提取文本内容
+    从 LLM 响应中提取文本内容
 
     Args:
-        response: LLM响应对象
+        response: LLM 响应对象
 
     Returns:
         响应文本内容
@@ -314,5 +314,5 @@ def extract_response_text(response) -> str:
         else:
             return str(response)
     except Exception as e:
-        logger.error(f"提取响应文本失败: {e}")
+        logger.error(f"提取响应文本失败：{e}")
         return ""

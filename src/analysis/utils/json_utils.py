@@ -1,6 +1,6 @@
 """
-JSON处理工具模块
-提供JSON解析、修复和正则提取功能
+JSON 处理工具模块
+提供 JSON 解析、修复和正则提取功能
 """
 
 import json
@@ -11,16 +11,16 @@ from astrbot.api import logger
 
 def fix_json(text: str) -> str:
     """
-    修复JSON格式问题，包括中文符号替换
+    修复 JSON 格式问题，包括中文符号替换
 
     Args:
-        text: 需要修复的JSON文本
+        text: 需要修复的 JSON 文本
 
     Returns:
-        修复后的JSON文本
+        修复后的 JSON 文本
     """
     try:
-        # 1. 移除markdown代码块标记
+        # 1. 移除 markdown 代码块标记
         text = re.sub(r"```json\s*", "", text)
         text = re.sub(r"```\s*$", "", text)
 
@@ -51,13 +51,13 @@ def fix_json(text: str) -> str:
         # 先处理字段值中的引号
         text = re.sub(r'"([^"]*(?:"[^"]*)*)"', escape_quotes_in_strings, text)
 
-        # 5. 修复截断的JSON
+        # 5. 修复截断的 JSON
         if not text.endswith("]"):
             last_complete = text.rfind("}")
             if last_complete > 0:
                 text = text[: last_complete + 1] + "]"
 
-        # 6. 修复常见的JSON格式问题
+        # 6. 修复常见的 JSON 格式问题
         # 1. 修复缺失的逗号
         text = re.sub(r"}\s*{", "}, {", text)
 
@@ -77,7 +77,7 @@ def fix_json(text: str) -> str:
         return text.strip()
 
     except Exception as e:
-        logger.error(f"JSON修复失败: {e}")
+        logger.error(f"JSON 修复失败：{e}")
         return text
 
 
@@ -85,42 +85,42 @@ def parse_json_response(
     result_text: str, data_type: str
 ) -> tuple[bool, list[dict] | None, str | None]:
     """
-    统一的JSON解析方法
+    统一的 JSON 解析方法
 
     Args:
-        result_text: LLM返回的原始文本
+        result_text: LLM 返回的原始文本
         data_type: 数据类型 ('topics' | 'user_titles' | 'golden_quotes')
 
     Returns:
-        (成功标志, 解析后的数据列表, 错误消息)
+        (成功标志，解析后的数据列表，错误消息)
     """
     try:
-        # 1. 提取JSON部分
+        # 1. 提取 JSON 部分
         json_match = re.search(r"\[.*?\]", result_text, re.DOTALL)
         if not json_match:
-            error_msg = f"{data_type}响应中未找到JSON格式"
+            error_msg = f"{data_type}响应中未找到 JSON 格式"
             logger.warning(error_msg)
             return False, None, error_msg
 
         json_text = json_match.group()
-        logger.debug(f"{data_type}分析JSON原文: {json_text[:500]}...")
+        logger.debug(f"{data_type}分析 JSON 原文：{json_text[:500]}...")
 
-        # 2. 修复JSON
+        # 2. 修复 JSON
         json_text = fix_json(json_text)
-        logger.debug(f"{data_type}修复后的JSON: {json_text[:300]}...")
+        logger.debug(f"{data_type}修复后的 JSON: {json_text[:300]}...")
 
-        # 3. 解析JSON
+        # 3. 解析 JSON
         data = json.loads(json_text)
         logger.info(f"{data_type}分析成功，解析到 {len(data)} 条数据")
         return True, data, None
 
     except json.JSONDecodeError as e:
-        error_msg = f"{data_type}JSON解析失败: {e}"
+        error_msg = f"{data_type}JSON 解析失败：{e}"
         logger.warning(error_msg)
-        logger.debug(f"修复后的JSON: {json_text if 'json_text' in locals() else 'N/A'}")
+        logger.debug(f"修复后的 JSON: {json_text if 'json_text' in locals() else 'N/A'}")
         return False, None, error_msg
     except Exception as e:
-        error_msg = f"{data_type}解析异常: {e}"
+        error_msg = f"{data_type}解析异常：{e}"
         logger.error(error_msg)
         return False, None, error_msg
 
@@ -153,7 +153,7 @@ def extract_topics_with_regex(result_text: str, max_topics: int) -> list[dict]:
             contributors_str = match[1].strip()
             detail = match[2].strip()
 
-            # 清理detail中的转义字符
+            # 清理 detail 中的转义字符
             detail = detail.replace('\\"', '"').replace("\\n", " ").replace("\\t", " ")
 
             # 解析参与者列表
@@ -165,7 +165,7 @@ def extract_topics_with_regex(result_text: str, max_topics: int) -> list[dict]:
             topics.append(
                 {
                     "topic": topic_name,
-                    "contributors": contributors[:5],  # 最多5个参与者
+                    "contributors": contributors[:5],  # 最多 5 个参与者
                     "detail": detail,
                 }
             )
@@ -174,7 +174,7 @@ def extract_topics_with_regex(result_text: str, max_topics: int) -> list[dict]:
         return topics
 
     except Exception as e:
-        logger.error(f"话题正则表达式提取失败: {e}")
+        logger.error(f"话题正则表达式提取失败：{e}")
         return []
 
 
@@ -219,7 +219,7 @@ def extract_user_titles_with_regex(result_text: str, max_count: int) -> list[dic
         return titles
 
     except Exception as e:
-        logger.error(f"用户称号正则表达式提取失败: {e}")
+        logger.error(f"用户称号正则表达式提取失败：{e}")
         return []
 
 
@@ -263,5 +263,5 @@ def extract_golden_quotes_with_regex(result_text: str, max_count: int) -> list[d
         return quotes
 
     except Exception as e:
-        logger.error(f"金句正则表达式提取失败: {e}")
+        logger.error(f"金句正则表达式提取失败：{e}")
         return []
