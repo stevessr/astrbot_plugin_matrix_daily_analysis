@@ -1,0 +1,10 @@
+
+.kilocode/
+.kiro/
+.vscode/
+src/analysis/ARCHITECTURE.md
+.serena/.gitignore
+.serena/project.yml
+debug_output.html
+__pycache__
+
