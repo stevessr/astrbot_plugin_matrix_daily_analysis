@@ -119,15 +119,20 @@ class UserTitleAnalyzer(BaseAnalyzer):
                     logger.warning(f"用户称号数据格式不完整，跳过：{title_data}")
                     continue
 
-                # 验证 matrix 号格式（单个用户 matrix 号）
-                try:
-                    matrix = int(matrix)
-                except (ValueError, TypeError):
-                    logger.warning(f"matrix 号格式无效，跳过：{matrix}")
+                # Matrix 使用字符串 MXID
+                if not matrix:
+                    logger.warning(f"matrix 号为空，跳过：{matrix}")
                     continue
+                matrix = str(matrix)
 
                 titles.append(
-                    UserTitle(name=name, matrix=matrix, title=title, mbti=mbti, reason=reason)
+                    UserTitle(
+                        name=name,
+                        matrix=matrix,
+                        title=title,
+                        mbti=mbti,
+                        reason=reason,
+                    )
                 )
 
             return titles

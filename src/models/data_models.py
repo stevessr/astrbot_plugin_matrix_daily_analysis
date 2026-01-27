@@ -20,7 +20,7 @@ class UserTitle:
     """用户称号数据结构"""
 
     name: str
-    matrix: int
+    matrix: str
     title: str
     mbti: str
     reason: str
@@ -33,7 +33,7 @@ class GoldenQuote:
     content: str
     sender: str
     reason: str
-    matrix: int = 0
+    matrix: str = ""
 
 
 @dataclass

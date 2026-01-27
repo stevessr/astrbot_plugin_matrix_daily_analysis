@@ -56,6 +56,34 @@ class matrixGroupDailyAnalysis(Star):
 
         logger.info("matrix 群日常分析插件已初始化（模块化版本）")
 
+    def _ensure_components(self):
+        """在热重载或异常后恢复核心组件。"""
+        if self.config_manager is None:
+            self.config_manager = ConfigManager(self.config)
+        if self.bot_manager is None:
+            self.bot_manager = BotManager(self.config_manager)
+            self.bot_manager.set_context(self.context)
+        if self.message_analyzer is None:
+            self.message_analyzer = MessageAnalyzer(
+                self.context, self.config_manager, self.bot_manager
+            )
+        if self.report_generator is None:
+            self.report_generator = ReportGenerator(self.config_manager)
+        if self.retry_manager is None:
+            self.retry_manager = RetryManager(
+                self.bot_manager, self.html_render, self.report_generator
+            )
+        if self.auto_scheduler is None:
+            self.auto_scheduler = AutoScheduler(
+                self.config_manager,
+                self.message_analyzer.message_handler,
+                self.message_analyzer,
+                self.report_generator,
+                self.bot_manager,
+                self.retry_manager,
+                self.html_render,
+            )
+
     async def _delayed_start_scheduler(self):
         """延迟启动调度器，给系统时间初始化"""
         try:
@@ -120,6 +148,7 @@ class matrixGroupDailyAnalysis(Star):
         分析群聊日常活动
         用法：/群分析 [天数]
         """
+        self._ensure_components()
         platform_name = event.get_platform_name()
         if platform_name != "matrix":
             yield event.plain_result("❌ 此功能仅支持 Matrix 群聊/房间")
@@ -321,6 +350,7 @@ class matrixGroupDailyAnalysis(Star):
     @filter.regex(r"^/?群分析(?:\s+(\d+))?$")
     async def analyze_group_daily_regex(self, event: AstrMessageEvent):
         """兼容未配置 wake_prefix 的指令触发。"""
+        self._ensure_components()
         if event.is_at_or_wake_command:
             return
         message_str = event.get_message_str().strip().lstrip("/")
@@ -340,6 +370,7 @@ class matrixGroupDailyAnalysis(Star):
         设置分析报告输出格式
         用法：/设置格式 [image|text|pdf]
         """
+        self._ensure_components()
         platform_name = event.get_platform_name()
         if platform_name != "matrix":
             yield event.plain_result("❌ 此功能仅支持 Matrix 群聊/房间")
@@ -382,6 +413,7 @@ class matrixGroupDailyAnalysis(Star):
     @filter.regex(r"^/?设置格式(?:\s+(\S+))?$")
     async def set_output_format_regex(self, event: AstrMessageEvent):
         """兼容未配置 wake_prefix 的指令触发。"""
+        self._ensure_components()
         if event.is_at_or_wake_command:
             return
         message_str = event.get_message_str().strip().lstrip("/")
@@ -399,6 +431,7 @@ class matrixGroupDailyAnalysis(Star):
         设置分析报告模板
         用法：/设置模板 [模板名称或序号]
         """
+        self._ensure_components()
         platform_name = event.get_platform_name()
         if platform_name != "matrix":
             yield event.plain_result("❌ 此功能仅支持 Matrix 群聊/房间")
@@ -465,6 +498,7 @@ class matrixGroupDailyAnalysis(Star):
     @filter.regex(r"^/?设置模板(?:\s+(.+))?$")
     async def set_report_template_regex(self, event: AstrMessageEvent):
         """兼容未配置 wake_prefix 的指令触发。"""
+        self._ensure_components()
         if event.is_at_or_wake_command:
             return
         message_str = event.get_message_str().strip().lstrip("/")
@@ -480,6 +514,7 @@ class matrixGroupDailyAnalysis(Star):
         查看所有可用的报告模板及预览图
         用法：/查看模板
         """
+        self._ensure_components()
         platform_name = event.get_platform_name()
         if platform_name != "matrix":
             yield event.plain_result("❌ 此功能仅支持 Matrix 群聊/房间")
@@ -545,6 +580,7 @@ class matrixGroupDailyAnalysis(Star):
     @filter.regex(r"^/?查看模板$")
     async def view_templates_regex(self, event: AstrMessageEvent):
         """兼容未配置 wake_prefix 的指令触发。"""
+        self._ensure_components()
         if event.is_at_or_wake_command:
             return
         async for result in self.view_templates(event):
@@ -557,6 +593,7 @@ class matrixGroupDailyAnalysis(Star):
         安装 PDF 功能依赖
         用法：/安装 PDF
         """
+        self._ensure_components()
         platform_name = event.get_platform_name()
         if platform_name != "matrix":
             yield event.plain_result("❌ 此功能仅支持 Matrix 群聊/房间")
@@ -576,6 +613,7 @@ class matrixGroupDailyAnalysis(Star):
     @filter.regex(r"^/?安装\s*PDF$")
     async def install_pdf_deps_regex(self, event: AstrMessageEvent):
         """兼容未配置 wake_prefix 的指令触发。"""
+        self._ensure_components()
         if event.is_at_or_wake_command:
             return
         async for result in self.install_pdf_deps(event):
@@ -595,6 +633,7 @@ class matrixGroupDailyAnalysis(Star):
         - reload: 重新加载配置并重启定时任务
         - test: 测试自动分析功能
         """
+        self._ensure_components()
         platform_name = event.get_platform_name()
         if platform_name != "matrix":
             yield event.plain_result("❌ 此功能仅支持 Matrix 群聊/房间")
@@ -708,6 +747,7 @@ class matrixGroupDailyAnalysis(Star):
     @filter.regex(r"^/?分析设置(?:\s+(\S+))?$")
     async def analysis_settings_regex(self, event: AstrMessageEvent):
         """兼容未配置 wake_prefix 的指令触发。"""
+        self._ensure_components()
         if event.is_at_or_wake_command:
             return
         message_str = event.get_message_str().strip().lstrip("/")

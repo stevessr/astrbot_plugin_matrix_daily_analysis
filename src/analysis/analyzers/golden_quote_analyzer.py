@@ -156,7 +156,7 @@ class GoldenQuoteAnalyzer(BaseAnalyzer):
                                     "sender": nickname,
                                     "time": msg_time,
                                     "content": text,
-                                    "matrix": sender.get("user_id", 0),
+                                    "matrix": str(sender.get("user_id", "")),
                                 }
                             )
 
@@ -200,7 +200,7 @@ class GoldenQuoteAnalyzer(BaseAnalyzer):
                         quote.content in msg["content"]
                         or msg["content"] in quote.content
                     ) and quote.sender == msg["sender"]:
-                        quote.matrix = msg.get("matrix", 0)
+                        quote.matrix = str(msg.get("matrix", ""))
                         break
 
             return quotes, usage
