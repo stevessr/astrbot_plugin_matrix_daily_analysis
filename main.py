@@ -140,7 +140,7 @@ class matrixGroupDailyAnalysis(Star):
             logger.error(f"插件资源清理失败：{e}")
 
     @filter.command("群分析")
-    @filter.permission_type(PermissionType.MEMBER)
+    @filter.permission_type(PermissionType.ADMIN)
     async def analyze_group_daily(
         self, event: AstrMessageEvent, days: int | None = None
     ):
@@ -353,6 +353,9 @@ class matrixGroupDailyAnalysis(Star):
         self._ensure_components()
         if event.is_at_or_wake_command:
             return
+        if not event.is_admin():
+            yield event.plain_result("❌ 该指令仅管理员可用")
+            return
         message_str = event.get_message_str().strip().lstrip("/")
         parts = message_str.split()
         days = None
@@ -362,7 +365,7 @@ class matrixGroupDailyAnalysis(Star):
             yield result
 
     @filter.command("设置格式")
-    @filter.permission_type(PermissionType.MEMBER)
+    @filter.permission_type(PermissionType.ADMIN)
     async def set_output_format(
         self, event: AstrMessageEvent, format_type: str = ""
     ):
@@ -416,6 +419,9 @@ class matrixGroupDailyAnalysis(Star):
         self._ensure_components()
         if event.is_at_or_wake_command:
             return
+        if not event.is_admin():
+            yield event.plain_result("❌ 该指令仅管理员可用")
+            return
         message_str = event.get_message_str().strip().lstrip("/")
         parts = message_str.split(maxsplit=1)
         format_type = parts[1].strip() if len(parts) > 1 else ""
@@ -423,7 +429,7 @@ class matrixGroupDailyAnalysis(Star):
             yield result
 
     @filter.command("设置模板")
-    @filter.permission_type(PermissionType.MEMBER)
+    @filter.permission_type(PermissionType.ADMIN)
     async def set_report_template(
         self, event: AstrMessageEvent, template_input: str = ""
     ):
@@ -501,6 +507,9 @@ class matrixGroupDailyAnalysis(Star):
         self._ensure_components()
         if event.is_at_or_wake_command:
             return
+        if not event.is_admin():
+            yield event.plain_result("❌ 该指令仅管理员可用")
+            return
         message_str = event.get_message_str().strip().lstrip("/")
         parts = message_str.split(maxsplit=1)
         template_input = parts[1].strip() if len(parts) > 1 else ""
@@ -508,7 +517,7 @@ class matrixGroupDailyAnalysis(Star):
             yield result
 
     @filter.command("查看模板")
-    @filter.permission_type(PermissionType.MEMBER)
+    @filter.permission_type(PermissionType.ADMIN)
     async def view_templates(self, event: AstrMessageEvent):
         """
         查看所有可用的报告模板及预览图
@@ -583,11 +592,14 @@ class matrixGroupDailyAnalysis(Star):
         self._ensure_components()
         if event.is_at_or_wake_command:
             return
+        if not event.is_admin():
+            yield event.plain_result("❌ 该指令仅管理员可用")
+            return
         async for result in self.view_templates(event):
             yield result
 
     @filter.command("安装 PDF")
-    @filter.permission_type(PermissionType.MEMBER)
+    @filter.permission_type(PermissionType.ADMIN)
     async def install_pdf_deps(self, event: AstrMessageEvent):
         """
         安装 PDF 功能依赖
@@ -616,11 +628,14 @@ class matrixGroupDailyAnalysis(Star):
         self._ensure_components()
         if event.is_at_or_wake_command:
             return
+        if not event.is_admin():
+            yield event.plain_result("❌ 该指令仅管理员可用")
+            return
         async for result in self.install_pdf_deps(event):
             yield result
 
     @filter.command("分析设置")
-    @filter.permission_type(PermissionType.MEMBER)
+    @filter.permission_type(PermissionType.ADMIN)
     async def analysis_settings(
         self, event: AstrMessageEvent, action: str = "status"
     ):
@@ -749,6 +764,9 @@ class matrixGroupDailyAnalysis(Star):
         """兼容未配置 wake_prefix 的指令触发。"""
         self._ensure_components()
         if event.is_at_or_wake_command:
+            return
+        if not event.is_admin():
+            yield event.plain_result("❌ 该指令仅管理员可用")
             return
         message_str = event.get_message_str().strip().lstrip("/")
         parts = message_str.split(maxsplit=1)
