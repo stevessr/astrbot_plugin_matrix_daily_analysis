@@ -95,33 +95,10 @@ _✨ 基于 AstrBot 的 Matrix 群聊日常分析插件，生成结构化统计�
 - Matrix 发送图片/文件需要先上传，网络不畅会影响发送
 - 图片发送失败会进入重试队列，失败后回退文本
 
-## 贡献
 
-<div align="center">
+### P.S.
+本插件基于
 
-![贡献指南](./assets/contribution-guide.jpg)
+https://github.com/SXP-Simon/astrbot_plugin_qq_group_daily_analysis
 
-</div>
-
-### 开发环境设置
-
-1. 安装 pre-commit
-```bash
-pip install pre-commit
-```
-
-2. 安装 git hook
-```bash
-pre-commit install
-```
-
-3. 手动运行检查
-```bash
-pre-commit run --all-files
-```
-
-## 许可证
-
-MIT License
-
-欢迎提交 Issue 和 Pull Request 来改进这个插件！
+修改
