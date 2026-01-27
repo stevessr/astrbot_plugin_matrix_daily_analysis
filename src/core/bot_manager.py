@@ -171,6 +171,19 @@ class BotManager:
                 if config_ids:
                     self.set_bot_matrix_ids(config_ids)
             return True
+        if hasattr(event, "client") and event.client:
+            platform_id = None
+            if hasattr(event, "get_platform_id"):
+                platform_id = event.get_platform_id()
+            self.set_bot_instance(event.client, platform_id or "matrix")
+            bot_id = self._extract_bot_matrix_id(event.client)
+            if bot_id:
+                self.set_bot_matrix_ids([bot_id])
+            else:
+                config_ids = self.config_manager.get_bot_matrix_ids()
+                if config_ids:
+                    self.set_bot_matrix_ids(config_ids)
+            return True
         return False
 
     def _extract_bot_matrix_id(self, bot_instance):

@@ -182,14 +182,15 @@ class RetryManager:
             logger.info(
                 f"[RetryManager] 正在向群 {task.group_id} 发送重试图片 (Matrix 上传模式)..."
             )
-            if not (hasattr(bot, "api") and hasattr(bot.api, "upload_file") and hasattr(bot.api, "room_send")):
+            client = bot.api if hasattr(bot, "api") else bot
+            if not (hasattr(client, "upload_file") and hasattr(client, "send_message")):
                 logger.warning(
-                    f"[RetryManager] Bot 缺少 Matrix 发送接口，无法发送图片。"
+                    "[RetryManager] Bot 缺少 Matrix 发送接口，无法发送图片。"
                 )
                 return False
 
             try:
-                upload_resp = await bot.api.upload_file(
+                upload_resp = await client.upload_file(
                     image_data, "image/jpeg", "report.jpg"
                 )
                 content_uri = upload_resp.get("content_uri")
@@ -197,18 +198,18 @@ class RetryManager:
                     logger.warning("[RetryManager] 图片上传失败：未返回 content_uri")
                     return False
 
-                await bot.api.room_send(
-                    room_id=task.group_id,
-                    message_type="m.room.message",
-                    content={
+                await client.send_message(
+                    task.group_id,
+                    "m.room.message",
+                    {
                         "msgtype": "m.text",
                         "body": "📊 每日群聊分析报告（重试发送）：",
                     },
                 )
-                await bot.api.room_send(
-                    room_id=task.group_id,
-                    message_type="m.room.message",
-                    content={
+                await client.send_message(
+                    task.group_id,
+                    "m.room.message",
+                    {
                         "msgtype": "m.image",
                         "body": "Daily Report.jpg",
                         "url": content_uri,
@@ -239,14 +240,17 @@ class RetryManager:
             if not bot:
                 return
 
-            if not (hasattr(bot, "api") and hasattr(bot.api, "room_send")):
-                logger.warning("[RetryManager] Bot 缺少 Matrix room_send，无法发送回退文本")
+            client = bot.api if hasattr(bot, "api") else bot
+            if not hasattr(client, "send_message"):
+                logger.warning(
+                    "[RetryManager] Bot 缺少 Matrix room_send，无法发送回退文本"
+                )
                 return
 
-            await bot.api.room_send(
-                room_id=task.group_id,
-                message_type="m.room.message",
-                content={
+            await client.send_message(
+                task.group_id,
+                "m.room.message",
+                {
                     "msgtype": "m.text",
                     "body": f"⚠️ 图片报告多次生成失败，为您呈现文本版报告：\n{text_report}",
                 },

@@ -97,8 +97,9 @@ class MessageHandler:
             # 获取群成员列表以填充昵称
             display_names = {}
             try:
-                if hasattr(bot_instance, "api") and hasattr(bot_instance.api, "get_room_members"):
-                    members_resp = await bot_instance.api.get_room_members(group_id)
+                client = bot_instance.api if hasattr(bot_instance, "api") else bot_instance
+                if hasattr(client, "get_room_members"):
+                    members_resp = await client.get_room_members(group_id)
                     member_events = members_resp.get("chunk", [])
                     for event in member_events:
                         if event.get("type") == "m.room.member":
@@ -110,68 +111,91 @@ class MessageHandler:
             except Exception as e:
                 logger.warning(f"获取群成员列表失败，将无法显示昵称：{e}")
 
-            # 使用 room_messages 获取历史消息
-            # direction='b' (backwards), limit=config.max_messages
-            if hasattr(bot_instance, "api") and hasattr(bot_instance.api, "room_messages"):
-                response = await bot_instance.api.room_messages(
-                    room_id=group_id,
-                    limit=limit,
-                    direction="b"
-                )
-                chunk = response.get("chunk", [])
+            # 使用 room_messages 分页获取历史消息（direction='b' 往后翻页）
+            client = bot_instance.api if hasattr(bot_instance, "api") else bot_instance
+            if hasattr(client, "room_messages"):
+                from_token = None
+                remaining = limit
+                page_size = min(200, max(1, remaining))
+                reached_start = False
 
-                # Matrix 返回的是 chunk，包含 events
-                for event in chunk:
-                    # 过滤非消息事件
-                    if event.get("type") != "m.room.message":
-                        continue
+                while remaining > 0 and not reached_start:
+                    response = await client.room_messages(
+                        room_id=group_id,
+                        limit=page_size,
+                        direction="b",
+                        from_token=from_token,
+                    )
+                    chunk = response.get("chunk", [])
+                    if not chunk:
+                        break
 
-                    # 检查时间
-                    ts = event.get("origin_server_ts", 0)
-                    if ts < start_ts:
-                        continue # 太旧的消息
-                    if ts > end_ts:
-                        continue
+                    # Matrix 返回的是 chunk，包含 events（倒序：新->旧）
+                    for event in chunk:
+                        # 过滤非消息事件
+                        if event.get("type") != "m.room.message":
+                            continue
 
-                    content = event.get("content", {})
-                    sender = event.get("sender")
+                        # 检查时间
+                        ts = event.get("origin_server_ts", 0)
+                        if ts < start_ts:
+                            reached_start = True
+                            continue  # 太旧的消息
+                        if ts > end_ts:
+                            continue
 
-                    # 过滤机器人自己的消息
-                    if self.bot_manager and self.bot_manager.should_filter_bot_message(sender):
-                        continue
+                        content = event.get("content", {})
+                        sender = event.get("sender")
 
-                    # 获取昵称
-                    nickname = display_names.get(sender, sender)
+                        # 过滤机器人自己的消息
+                        if (
+                            self.bot_manager
+                            and self.bot_manager.should_filter_bot_message(sender)
+                        ):
+                            continue
 
-                    # 转换消息格式
-                    msg_dict = {
-                        "time": ts / 1000,
-                        "sender": {
-                            "user_id": sender,
-                            "nickname": nickname
-                        },
-                        "message": []
-                    }
+                        # 获取昵称
+                        nickname = display_names.get(sender, sender)
 
-                    msg_type = content.get("msgtype")
-                    if msg_type == "m.text":
-                        msg_dict["message"].append({
-                            "type": "text",
-                            "data": {"text": content.get("body", "")}
-                        })
-                    elif msg_type == "m.image":
-                        msg_dict["message"].append({
-                            "type": "image",
-                            "data": {"file": content.get("url", "")} # mxc:// url
-                        })
-                    else:
-                        # 其他类型作为文本处理
-                         msg_dict["message"].append({
-                            "type": "text",
-                            "data": {"text": f"[{msg_type}] {content.get('body', '')}"}
-                        })
+                        # 转换消息格式
+                        msg_dict = {
+                            "time": ts / 1000,
+                            "sender": {"user_id": sender, "nickname": nickname},
+                            "message": [],
+                        }
 
-                    messages.append(msg_dict)
+                        msg_type = content.get("msgtype")
+                        if msg_type == "m.text":
+                            msg_dict["message"].append(
+                                {"type": "text", "data": {"text": content.get("body", "")}}
+                            )
+                        elif msg_type == "m.image":
+                            msg_dict["message"].append(
+                                {
+                                    "type": "image",
+                                    "data": {"file": content.get("url", "")},
+                                }
+                            )
+                        else:
+                            # 其他类型作为文本处理
+                            msg_dict["message"].append(
+                                {
+                                    "type": "text",
+                                    "data": {
+                                        "text": f"[{msg_type}] {content.get('body', '')}"
+                                    },
+                                }
+                            )
+
+                        messages.append(msg_dict)
+                        remaining -= 1
+                        if remaining <= 0:
+                            break
+
+                    from_token = response.get("end")
+                    if not from_token:
+                        break
+                    page_size = min(200, max(1, remaining))
 
                 logger.info(f"Matrix 获取到 {len(messages)} 条有效消息")
                 return messages

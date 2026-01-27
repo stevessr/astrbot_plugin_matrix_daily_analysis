@@ -132,6 +132,8 @@ class matrixGroupDailyAnalysis(Star):
 
         # 更新 bot 实例（用于手动命令）
         self.bot_manager.update_from_event(event)
+        if not self.bot_manager.has_bot_instance():
+            await self.bot_manager.auto_discover_bot_instances()
 
         # 检查群组权限
         if not self.config_manager.is_group_allowed(group_id):
@@ -151,6 +153,8 @@ class matrixGroupDailyAnalysis(Star):
         try:
             # 获取该群对应的平台 ID 和 bot 实例
             platform_id = await self.auto_scheduler.get_platform_id_for_group(group_id)
+            if not platform_id and hasattr(event, "get_platform_id"):
+                platform_id = event.get_platform_id()
             bot_instance = self.bot_manager.get_bot_instance(platform_id)
 
             if not bot_instance:

@@ -413,8 +413,9 @@ class AutoScheduler:
                 continue
 
             try:
-                if hasattr(bot_instance, "api") and hasattr(bot_instance.api, "get_joined_rooms"):
-                    rooms = await bot_instance.api.get_joined_rooms()
+                client = bot_instance.api if hasattr(bot_instance, "api") else bot_instance
+                if hasattr(client, "get_joined_rooms"):
+                    rooms = await client.get_joined_rooms()
                     all_groups.update(rooms)
                     logger.info(f"Matrix 平台获取到 {len(rooms)} 个房间")
             except Exception as e:
@@ -444,13 +445,18 @@ class AutoScheduler:
                     try:
                         # Assuming user_id is MXID
                         bot_instance = self.bot_manager.get_bot_instance(platform_id)
-                        if bot_instance and hasattr(bot_instance, "api") and hasattr(bot_instance.api, "get_avatar_url"):
+                        client = (
+                            bot_instance.api
+                            if bot_instance and hasattr(bot_instance, "api")
+                            else bot_instance
+                        )
+                        if client and hasattr(client, "get_avatar_url"):
                             # Get profile to find avatar_url (mxc URI)
-                            avatar_mxc = await bot_instance.api.get_avatar_url(user_id)
+                            avatar_mxc = await client.get_avatar_url(user_id)
 
-                            if avatar_mxc and hasattr(bot_instance.api, "get_thumbnail"):
+                            if avatar_mxc and hasattr(client, "get_thumbnail"):
                                 # Convert mxc to bytes (thumbnail) and then to base64 data URI
-                                avatar_bytes = await bot_instance.api.get_thumbnail(
+                                avatar_bytes = await client.get_thumbnail(
                                     avatar_mxc, width=100, height=100, method="crop"
                                 )
                                 b64 = base64.b64encode(avatar_bytes).decode()
@@ -670,21 +676,26 @@ class AutoScheduler:
 
                     try:
                         logger.info("尝试使用 Matrix 平台发送图片...")
-                        if hasattr(test_bot_instance, "api") and hasattr(test_bot_instance.api, "upload_file"):
-                            upload_resp = await test_bot_instance.api.upload_file(image_bytes, "image/png", "report.png")
+                        client = (
+                            test_bot_instance.api
+                            if hasattr(test_bot_instance, "api")
+                            else test_bot_instance
+                        )
+                        if hasattr(client, "upload_file") and hasattr(client, "send_message"):
+                            upload_resp = await client.upload_file(image_bytes, "image/png", "report.png")
                             content_uri = upload_resp.get("content_uri")
                             if content_uri:
                                     # Send Text First
-                                    await test_bot_instance.api.room_send(
-                                    room_id=group_id,
-                                    message_type="m.room.message",
-                                    content={"msgtype": "m.text", "body": prefix_text}
+                                    await client.send_message(
+                                    group_id,
+                                    "m.room.message",
+                                    {"msgtype": "m.text", "body": prefix_text}
                                     )
                                     # Send Image
-                                    await test_bot_instance.api.room_send(
-                                    room_id=group_id,
-                                    message_type="m.room.message",
-                                    content={
+                                    await client.send_message(
+                                    group_id,
+                                    "m.room.message",
+                                    {
                                         "msgtype": "m.image",
                                         "body": "Daily Report.png",
                                         "url": content_uri
@@ -731,10 +742,15 @@ class AutoScheduler:
                 if test_platform_id != "matrix":
                     continue
                 try:
-                    await test_bot_instance.api.room_send(
-                        room_id=group_id,
-                        message_type="m.room.message",
-                        content={"msgtype": "m.text", "body": text_content}
+                    client = (
+                        test_bot_instance.api
+                        if hasattr(test_bot_instance, "api")
+                        else test_bot_instance
+                    )
+                    await client.send_message(
+                        group_id,
+                        "m.room.message",
+                        {"msgtype": "m.text", "body": text_content}
                     )
                     logger.info("✅ Matrix 文本发送成功")
                     return True
@@ -777,22 +793,27 @@ class AutoScheduler:
                     with open(pdf_path, "rb") as f:
                         pdf_data = f.read()
 
-                    if hasattr(test_bot_instance, "api") and hasattr(test_bot_instance.api, "upload_file"):
+                    client = (
+                        test_bot_instance.api
+                        if hasattr(test_bot_instance, "api")
+                        else test_bot_instance
+                    )
+                    if hasattr(client, "upload_file") and hasattr(client, "send_message"):
                         # Upload
-                        upload_resp = await test_bot_instance.api.upload_file(pdf_data, "application/pdf", "report.pdf")
+                        upload_resp = await client.upload_file(pdf_data, "application/pdf", "report.pdf")
                         content_uri = upload_resp.get("content_uri")
                         if content_uri:
                                 # Send Text First
-                                await test_bot_instance.api.room_send(
-                                room_id=group_id,
-                                message_type="m.room.message",
-                                content={"msgtype": "m.text", "body": "📊 每日群聊分析报告已生成："}
+                                await client.send_message(
+                                group_id,
+                                "m.room.message",
+                                {"msgtype": "m.text", "body": "📊 每日群聊分析报告已生成："}
                                 )
                                 # Send File
-                                await test_bot_instance.api.room_send(
-                                room_id=group_id,
-                                message_type="m.room.message",
-                                content={
+                                await client.send_message(
+                                group_id,
+                                "m.room.message",
+                                {
                                     "msgtype": "m.file",
                                     "body": "Daily Report.pdf",
                                     "url": content_uri,
