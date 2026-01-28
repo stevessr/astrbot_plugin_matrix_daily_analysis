@@ -406,13 +406,19 @@ class matrixGroupDailyAnalysis(Star):
 
     def _build_dialogue_poll_prompt(self, history_text: str, option_count: int) -> str:
         """构造对话投票的 LLM 提示词。"""
-        template = self.config_manager.get_dialogue_poll_prompt() or DEFAULT_DIALOGUE_POLL_PROMPT
+        template = (
+            self.config_manager.get_dialogue_poll_prompt() or DEFAULT_DIALOGUE_POLL_PROMPT
+        )
         try:
-            return template.format(option_count=option_count, history_text=history_text)
+            return (
+                template.replace("{option_count}", str(option_count))
+                .replace("{history_text}", history_text)
+            )
         except Exception as e:
             logger.warning(f"对话投票提示词格式化失败，回退默认提示词：{e}")
-            return DEFAULT_DIALOGUE_POLL_PROMPT.format(
-                option_count=option_count, history_text=history_text
+            return (
+                DEFAULT_DIALOGUE_POLL_PROMPT.replace("{option_count}", str(option_count))
+                .replace("{history_text}", history_text)
             )
 
     def _parse_dialogue_poll_json(self, text: str) -> tuple[str, list[str]] | None:
