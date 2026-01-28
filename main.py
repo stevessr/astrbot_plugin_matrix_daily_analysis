@@ -690,7 +690,7 @@ class matrixGroupDailyAnalysis(Star):
         说明：诱导为可选补充指令，将被追加到提示词中
         """
         # Block default chat replies once this command is handled.
-        event.call_llm = True
+        event.should_call_llm(True)
         event.stop_event()
         from .src.analysis.utils.llm_utils import (
             call_provider_with_retry,
@@ -805,6 +805,7 @@ class matrixGroupDailyAnalysis(Star):
                 event, platform_id, group_id, question, options
             )
             if sent is True:
+                event._has_send_oper = True
                 return
             if sent is False:
                 fallback_text = self._build_poll_fallback_text(question, options)
