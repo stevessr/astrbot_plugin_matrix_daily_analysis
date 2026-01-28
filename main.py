@@ -429,16 +429,23 @@ class matrixGroupDailyAnalysis(Star):
             return None
         match = re.search(r"\[.*\]", text, re.DOTALL)
         if not match:
+            logger.warning("对话投票 JSON 匹配失败，未找到数组结构")
             return None
         json_text = fix_json(match.group())
+        logger.debug(f"对话投票 JSON 修复后：{json_text}")
         try:
             data = json.loads(json_text)
-        except Exception:
+        except Exception as e:
+            logger.warning(
+                f"对话投票 JSON 解析失败：{e} | raw={text} | cleaned={json_text}"
+            )
             return None
         if not isinstance(data, list) or not data:
+            logger.warning("对话投票 JSON 内容异常（非列表或空）")
             return None
         first = data[0] if isinstance(data[0], dict) else None
         if not first:
+            logger.warning("对话投票 JSON 第一个元素非对象或为空")
             return None
         question = str(first.get("question", "")).strip()
         options_raw = first.get("options", [])
@@ -458,6 +465,7 @@ class matrixGroupDailyAnalysis(Star):
         if not question:
             question = "请选择下一句"
         if len(options) < 2:
+            logger.warning("对话投票选项数量不足，LLM 输出：%s", options_raw)
             return None
         return question, options
 
@@ -553,6 +561,7 @@ class matrixGroupDailyAnalysis(Star):
             result_text = extract_response_text(llm_resp)
             parsed = self._parse_dialogue_poll_json(result_text)
             if not parsed:
+                logger.warning("对话投票解析失败，LLM 输出：%s", result_text[:100])
                 yield event.plain_result("❌ 解析投票内容失败，请稍后重试")
                 return
 
