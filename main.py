@@ -6,10 +6,9 @@ matrix 群日常分析插件
 """
 
 import asyncio
+import importlib
 import json
 import re
-
-from astrbot_plugin_matrix_adapter.components import Poll
 
 from astrbot.api import AstrBotConfig, logger
 from astrbot.api.event import AstrMessageEvent, filter
@@ -36,6 +35,26 @@ POLL_EVENT_TYPE_STABLE = "m.poll.start"
 POLL_POLL_KEY_STABLE = "m.poll"
 POLL_EVENT_TYPE_UNSTABLE = "org.matrix.msc3381.poll.start"
 POLL_POLL_KEY_UNSTABLE = "org.matrix.msc3381.poll.start"
+
+
+def _safe_import(module_path: str):
+    try:
+        return importlib.import_module(module_path)
+    except ModuleNotFoundError as e:
+        if module_path == e.name or module_path.startswith(f"{e.name}."):
+            return None
+        raise
+
+
+def _import_matrix_adapter_module(module_path: str):
+    for base in (
+        "astrbot_plugin_matrix_adapter",
+        "data.plugins.astrbot_plugin_matrix_adapter",
+    ):
+        module = _safe_import(f"{base}.{module_path}" if module_path else base)
+        if module is not None:
+            return module
+    return None
 
 
 @register(
@@ -555,9 +574,12 @@ class matrixGroupDailyAnalysis(Star):
         """优先通过 Matrix 适配器直接发送投票。"""
         if hasattr(event, "client") and getattr(event, "client"):
             try:
-                from astrbot_plugin_matrix_adapter.sender.handlers.poll import (
-                    send_poll as _send_poll,
+                poll_module = _import_matrix_adapter_module(
+                    "sender.handlers.poll",
                 )
+                if not poll_module or not hasattr(poll_module, "send_poll"):
+                    raise RuntimeError("Matrix adapter poll handler not available")
+                _send_poll = poll_module.send_poll
 
                 is_encrypted_room = False
                 if hasattr(event, "e2ee_manager") and event.e2ee_manager:
@@ -785,6 +807,14 @@ class matrixGroupDailyAnalysis(Star):
                 fallback_text = self._build_poll_fallback_text(question, options)
                 yield event.plain_result(
                     f"⚠️ Matrix 投票发送失败，已转为文本格式：\n{fallback_text}"
+                )
+                return
+            poll_components = _import_matrix_adapter_module("components")
+            Poll = getattr(poll_components, "Poll", None) if poll_components else None
+            if Poll is None:
+                fallback_text = self._build_poll_fallback_text(question, options)
+                yield event.plain_result(
+                    f"⚠️ 未检测到 Matrix 适配器投票组件，已转为文本格式：\n{fallback_text}"
                 )
                 return
 
