@@ -32,6 +32,10 @@ DEFAULT_DIALOGUE_POLL_PROMPT = (
     "不要@具体用户，不要包含隐私或敏感信息。每条候选发言 6-20 字。只输出 JSON 数组，且只包含一个对象，"
     '格式如下：[{"question":"...","options":["...","..."]}]。\\n\\n聊天记录：\\n{history_text}'
 )
+POLL_EVENT_TYPE_STABLE = "m.poll.start"
+POLL_POLL_KEY_STABLE = "m.poll"
+POLL_EVENT_TYPE_UNSTABLE = "org.matrix.msc3381.poll.start"
+POLL_POLL_KEY_UNSTABLE = "org.matrix.msc3381.poll.start"
 
 
 @register(
@@ -543,6 +547,61 @@ class matrixGroupDailyAnalysis(Star):
             return None
         return question, options
 
+    def _build_poll_fallback_text(self, question: str, options: list[str]) -> str:
+        """构建投票失败时的文本回退内容。"""
+        safe_question = (question or "").strip() or "请选择"
+        lines = [safe_question]
+        lines.extend([f"{idx + 1}. {opt}" for idx, opt in enumerate(options or []) if opt])
+        return "\n".join(lines).strip()
+
+    async def _send_dialogue_poll_via_adapter(
+        self,
+        event: AstrMessageEvent,
+        platform_id: str | None,
+        room_id: str,
+        question: str,
+        options: list[str],
+    ) -> bool | None:
+        """优先通过 Matrix 适配器直接发送投票。"""
+        platform = None
+        if self.bot_manager:
+            platform = self.bot_manager.get_platform(
+                platform_id=platform_id, platform_name="matrix"
+            )
+        if not platform:
+            return None
+
+        sender = getattr(platform, "sender", None)
+        if not sender or not hasattr(sender, "send_poll"):
+            return None
+
+        try:
+            await sender.send_poll(
+                room_id,
+                question=question,
+                answers=options,
+                max_selections=1,
+                event_type=POLL_EVENT_TYPE_STABLE,
+                poll_key=POLL_POLL_KEY_STABLE,
+            )
+            return True
+        except Exception as e:
+            logger.warning(f"发送投票失败，尝试回退到旧事件类型：{e}")
+
+        try:
+            await sender.send_poll(
+                room_id,
+                question=question,
+                answers=options,
+                max_selections=1,
+                event_type=POLL_EVENT_TYPE_UNSTABLE,
+                poll_key=POLL_POLL_KEY_UNSTABLE,
+            )
+            return True
+        except Exception as e:
+            logger.error(f"发送投票失败（回退事件类型仍失败）：{e}")
+            return False
+
     @filter.command("对话投票")
     @filter.permission_type(PermissionType.ADMIN)
     async def generate_dialogue_poll(
@@ -643,6 +702,17 @@ class matrixGroupDailyAnalysis(Star):
 
             question, options = parsed
             options = options[:option_count]
+            sent = await self._send_dialogue_poll_via_adapter(
+                event, platform_id, group_id, question, options
+            )
+            if sent is True:
+                return
+            if sent is False:
+                fallback_text = self._build_poll_fallback_text(question, options)
+                yield event.plain_result(
+                    f"⚠️ Matrix 投票发送失败，已转为文本格式：\n{fallback_text}"
+                )
+                return
 
             poll = Poll(question=question, answers=options, max_selections=1)
             yield event.chain_result([poll])

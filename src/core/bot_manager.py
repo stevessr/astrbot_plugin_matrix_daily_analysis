@@ -208,6 +208,29 @@ class BotManager:
         # 检查是否在 matrix 号列表中
         return sender_id_str in self._bot_matrix_ids
 
+    def get_platform(self, platform_id: str | None = None, platform_name: str | None = None):
+        """获取平台实例（用于访问 sender 等平台能力）"""
+        if platform_id and platform_id in self._platforms:
+            return self._platforms[platform_id]
+
+        if not self._context or not hasattr(self._context, "platform_manager"):
+            return None
+
+        for platform in self._context.platform_manager.get_insts():
+            try:
+                meta = platform.meta()
+                if platform_id and meta and meta.id == platform_id:
+                    self._platforms[platform_id] = platform
+                    return platform
+                if not platform_id and platform_name and meta and meta.name == platform_name:
+                    key = meta.id or platform_name
+                    self._platforms[key] = platform
+                    return platform
+            except Exception:
+                continue
+
+        return None
+
     def is_plugin_enabled(self, platform_id: str, plugin_name: str) -> bool:
         """检查指定平台是否启用了该插件"""
         if platform_id not in self._platforms:
