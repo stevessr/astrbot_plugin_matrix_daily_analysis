@@ -13,7 +13,7 @@ from astrbot_plugin_matrix_adapter.components import Poll
 
 from astrbot.api import AstrBotConfig, logger
 from astrbot.api.event import AstrMessageEvent, filter
-from astrbot.api.star import Context, Star
+from astrbot.api.star import Context, Star, register
 from astrbot.core.star.filter.permission import PermissionType
 
 from .src.core.bot_manager import BotManager
@@ -27,13 +27,20 @@ from .src.utils.helpers import MessageAnalyzer
 from .src.utils.pdf_utils import PDFInstaller
 
 DEFAULT_DIALOGUE_POLL_PROMPT = (
-    "你是群聊文风模仿器。根据下面的聊天记录，生成一个单选投票：给出一个简短的问题(question)，"
-    "以及 {option_count} 条候选发言(options)。候选发言必须是‘嘎啦给目’风格，语气俏皮、有点碎碎念，但不要冒犯。"
+    "你是群聊文风模仿器。根据下面的聊天记录，生成一个单选投票：给出一个简短的问题 (question)，"
+    "以及 {option_count} 条候选发言 (options)。候选发言必须是‘嘎啦给目’风格，语气俏皮、有点碎碎念，但不要冒犯。"
     "不要@具体用户，不要包含隐私或敏感信息。每条候选发言 6-20 字。只输出 JSON 数组，且只包含一个对象，"
-    "格式如下：[{\"question\":\"...\",\"options\":[\"...\",\"...\"]}]。\\n\\n聊天记录：\\n{history_text}"
+    '格式如下：[{"question":"...","options":["...","..."]}]。\\n\\n聊天记录：\\n{history_text}'
 )
 
 
+@register(
+    "astrbot_plugin_matrix_daily_analysis",
+    "stevessr",
+    "matrix 群日常分析总结插件 - 生成精美的群聊分析报告，支持话题分析、用户形象、群聊圣经等功能",
+    "v0.0.1",
+    "https://github.com/stevessr/astrbot_plugin_matrix_daily_analysis",
+)
 class matrixGroupDailyAnalysis(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
@@ -443,19 +450,18 @@ class matrixGroupDailyAnalysis(Star):
     def _build_dialogue_poll_prompt(self, history_text: str, option_count: int) -> str:
         """构造对话投票的 LLM 提示词。"""
         template = (
-            self.config_manager.get_dialogue_poll_prompt() or DEFAULT_DIALOGUE_POLL_PROMPT
+            self.config_manager.get_dialogue_poll_prompt()
+            or DEFAULT_DIALOGUE_POLL_PROMPT
         )
         try:
-            return (
-                template.replace("{option_count}", str(option_count))
-                .replace("{history_text}", history_text)
+            return template.replace("{option_count}", str(option_count)).replace(
+                "{history_text}", history_text
             )
         except Exception as e:
             logger.warning(f"对话投票提示词格式化失败，回退默认提示词：{e}")
-            return (
-                DEFAULT_DIALOGUE_POLL_PROMPT.replace("{option_count}", str(option_count))
-                .replace("{history_text}", history_text)
-            )
+            return DEFAULT_DIALOGUE_POLL_PROMPT.replace(
+                "{option_count}", str(option_count)
+            ).replace("{history_text}", history_text)
 
     def _parse_dialogue_poll_json(self, text: str) -> tuple[str, list[str]] | None:
         """解析 LLM 输出的投票 JSON。"""
@@ -511,7 +517,9 @@ class matrixGroupDailyAnalysis(Star):
             return None
         return question, options
 
-    def _parse_dialogue_poll_json_fallback(self, text: str) -> tuple[str, list[str]] | None:
+    def _parse_dialogue_poll_json_fallback(
+        self, text: str
+    ) -> tuple[str, list[str]] | None:
         """在 JSON 解析失败时尝试关键词提取 question/options。"""
         question_match = re.search(r'"question"\s*:\s*"([^"]+)"', text)
         options_match = re.search(r'"options"\s*:\s*\[([^\]]+)\]', text)
@@ -534,6 +542,7 @@ class matrixGroupDailyAnalysis(Star):
         if len(options) < 2:
             return None
         return question, options
+
     @filter.command("对话投票")
     @filter.permission_type(PermissionType.ADMIN)
     async def generate_dialogue_poll(
