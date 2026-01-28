@@ -380,15 +380,15 @@ class matrixGroupDailyAnalysis(Star):
         """将消息整理为对话提示词文本。"""
         prefixes = [
             prefix.lower().strip()
-            for prefix in self.config_manager.get_dialogue_poll_history_filter_prefixes()
+            for prefix in self.config_manager.get_history_filter_prefixes()
             if isinstance(prefix, str) and prefix.strip()
         ]
         user_filters = {
             user.lower().strip()
-            for user in self.config_manager.get_dialogue_poll_history_filter_users()
+            for user in self.config_manager.get_history_filter_users()
             if isinstance(user, str) and user.strip()
         }
-        skip_bot = self.config_manager.should_dialogue_poll_skip_bots()
+        skip_bot = self.config_manager.should_skip_history_bots()
         entries: list[tuple[float, str, str]] = []
         for msg in messages:
             sender = (

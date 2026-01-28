@@ -108,6 +108,30 @@ class ConfigManager:
         """获取分析天数"""
         return self._get_nested(("analysis", "days"), 1, "analysis_days")
 
+    def get_history_filter_prefixes(self) -> list[str]:
+        """获取历史消息过滤前缀（全局）"""
+        return self._get_nested(
+            ("analysis", "history_filters", "prefixes"),
+            [],
+            "history_filter_prefixes",
+        )
+
+    def get_history_filter_users(self) -> list[str]:
+        """获取历史消息过滤用户（全局）"""
+        return self._get_nested(
+            ("analysis", "history_filters", "users"),
+            [],
+            "history_filter_users",
+        )
+
+    def should_skip_history_bots(self) -> bool:
+        """判断是否全局跳过机器人发言"""
+        return self._get_nested(
+            ("analysis", "history_filters", "skip_bots"),
+            True,
+            "history_filter_skip_bots",
+        )
+
     def get_auto_analysis_time(self) -> str:
         """获取自动分析时间"""
         return self._get_nested(
@@ -228,30 +252,6 @@ class ConfigManager:
             ("analysis", "dialogue_poll", "prompt"),
             """你是群聊文风模仿器。根据下面的聊天记录，生成一个单选投票：给出一个简短的问题 (question)，以及 {option_count} 条候选发言 (options)。候选发言必须是‘嘎啦给目’风格，语气俏皮、有点碎碎念，但不要冒犯。不要@具体用户，不要包含隐私或敏感信息。每条候选发言 6-20 字。只输出 JSON 数组，且只包含一个对象，格式如下：[{\"question\":\"...\",\"options\":[\"...\",\"...\"]}]。\\n\\n聊天记录：\\n{history_text}""",
             "dialogue_poll_prompt",
-        )
-
-    def get_dialogue_poll_history_filter_prefixes(self) -> list[str]:
-        """获取对话投票历史排除前缀"""
-        return self._get_nested(
-            ("analysis", "dialogue_poll", "history_filter_prefixes"),
-            [],
-            "dialogue_poll_history_filter_prefixes",
-        )
-
-    def get_dialogue_poll_history_filter_users(self) -> list[str]:
-        """获取对话投票历史排除用户"""
-        return self._get_nested(
-            ("analysis", "dialogue_poll", "history_filter_users"),
-            [],
-            "dialogue_poll_history_filter_users",
-        )
-
-    def should_dialogue_poll_skip_bots(self) -> bool:
-        """判断是否对话投票历史跳过机器人消息"""
-        return self._get_nested(
-            ("analysis", "dialogue_poll", "history_filter_skip_bots"),
-            True,
-            "dialogue_poll_history_filter_skip_bots",
         )
 
     def get_user_title_provider_id(self) -> str:
