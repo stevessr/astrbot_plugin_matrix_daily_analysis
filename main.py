@@ -6,11 +6,14 @@ matrix 群日常分析插件
 """
 
 import asyncio
+import json
+import re
+
+from astrbot_plugin_matrix_adapter.components import Poll
 
 from astrbot.api import AstrBotConfig, logger
 from astrbot.api.event import AstrMessageEvent, filter
 from astrbot.api.star import Context, Star
-
 from astrbot.core.star.filter.permission import PermissionType
 
 from .src.core.bot_manager import BotManager
@@ -347,7 +350,7 @@ class matrixGroupDailyAnalysis(Star):
                 f"❌ 分析失败：{str(e)}。请检查网络连接和 LLM 配置，或联系管理员"
             )
 
-    @filter.regex(r"^/?群分析(?:\s+(\d+))?$")
+    @filter.regex(r"^/?群分析 (?:\s+(\d+))?$")
     async def analyze_group_daily_regex(self, event: AstrMessageEvent):
         """兼容未配置 wake_prefix 的指令触发。"""
         self._ensure_components()
@@ -364,11 +367,216 @@ class matrixGroupDailyAnalysis(Star):
         async for result in self.analyze_group_daily(event, days):
             yield result
 
+    def _format_messages_for_dialogue_prompt(
+        self, messages: list[dict], max_messages: int = 120
+    ) -> str:
+        """将消息整理为对话提示词文本。"""
+        entries: list[tuple[float, str, str]] = []
+        for msg in messages:
+            sender = (
+                msg.get("sender", {}).get("nickname")
+                or msg.get("sender", {}).get("user_id")
+                or "匿名"
+            )
+            msg_time = msg.get("time", 0) or 0
+            for content in msg.get("message", []):
+                if content.get("type") != "text":
+                    continue
+                text = content.get("data", {}).get("text", "").strip()
+                if not text:
+                    continue
+                if len(text) > 80:
+                    text = text[:77] + "..."
+                entries.append((msg_time, sender, text))
+
+        if not entries:
+            return ""
+
+        entries.sort(key=lambda x: x[0])
+        recent = entries[-max_messages:]
+        lines = [f"{sender}: {text}" for _, sender, text in recent]
+        return "\n".join(lines)
+
+    def _build_dialogue_poll_prompt(self, history_text: str, option_count: int) -> str:
+        """构造对话投票的 LLM 提示词。"""
+        return (
+            "你是群聊文风模仿器。根据下面的聊天记录，生成一个单选投票："
+            f"给出一个简短的问题 (question)，以及 {option_count} 条候选发言 (options)。"
+            "候选发言必须是‘嘎啦给目’风格，语气俏皮、有点碎碎念，但不要冒犯。"
+            "不要@具体用户，不要包含隐私或敏感信息。"
+            "每条候选发言 6-20 字。"
+            "只输出 JSON 数组，且只包含一个对象，格式如下："
+            '[{"question":"...","options":["...","..."]}]'
+            "\n\n聊天记录：\n"
+            f"{history_text}"
+        )
+
+    def _parse_dialogue_poll_json(self, text: str) -> tuple[str, list[str]] | None:
+        """解析 LLM 输出的投票 JSON。"""
+        from .src.analysis.utils.json_utils import fix_json
+
+        if not text:
+            return None
+        match = re.search(r"\[.*\]", text, re.DOTALL)
+        if not match:
+            return None
+        json_text = fix_json(match.group())
+        try:
+            data = json.loads(json_text)
+        except Exception:
+            return None
+        if not isinstance(data, list) or not data:
+            return None
+        first = data[0] if isinstance(data[0], dict) else None
+        if not first:
+            return None
+        question = str(first.get("question", "")).strip()
+        options_raw = first.get("options", [])
+        if not isinstance(options_raw, list):
+            return None
+        options: list[str] = []
+        for item in options_raw:
+            if not item:
+                continue
+            text_item = str(item).strip()
+            if not text_item:
+                continue
+            if len(text_item) > 32:
+                text_item = text_item[:29] + "..."
+            if text_item not in options:
+                options.append(text_item)
+        if not question:
+            question = "请选择下一句"
+        if len(options) < 2:
+            return None
+        return question, options
+
+    @filter.command("对话投票")
+    @filter.permission_type(PermissionType.ADMIN)
+    async def generate_dialogue_poll(
+        self, event: AstrMessageEvent, days: int | None = None
+    ):
+        """
+        根据历史消息生成对话选项并以单选投票发送
+        用法：/对话投票 [天数]
+        """
+        from .src.analysis.utils.llm_utils import (
+            call_provider_with_retry,
+            extract_response_text,
+        )
+
+        self._ensure_components()
+        platform_name = event.get_platform_name()
+        if platform_name != "matrix":
+            yield event.plain_result("❌ 此功能仅支持 Matrix 群聊/房间")
+            return
+
+        group_id = event.session.session_id
+        if not group_id:
+            yield event.plain_result("❌ 请在群聊中使用此命令")
+            return
+
+        # 更新 bot 实例（用于手动命令）
+        self.bot_manager.update_from_event(event)
+        if not self.bot_manager.has_bot_instance():
+            await self.bot_manager.auto_discover_bot_instances()
+
+        # 检查群组权限
+        if not self.config_manager.is_group_allowed(group_id):
+            yield event.plain_result("❌ 此群未启用日常分析功能")
+            return
+
+        analysis_days = (
+            days if days and 1 <= days <= 7 else self.config_manager.get_analysis_days()
+        )
+        yield event.plain_result(
+            f"🗳️ 正在根据近{analysis_days}天聊天生成对话选项，请稍候..."
+        )
+
+        try:
+            platform_id = await self.auto_scheduler.get_platform_id_for_group(group_id)
+            if not platform_id and hasattr(event, "get_platform_id"):
+                platform_id = event.get_platform_id()
+            bot_instance = self.bot_manager.get_bot_instance(platform_id)
+            if not bot_instance:
+                yield event.plain_result(
+                    f"❌ 未找到群 {group_id} 对应的 bot 实例（平台：{platform_id}）"
+                )
+                return
+
+            messages = await self.message_analyzer.message_handler.fetch_group_messages(
+                bot_instance, group_id, analysis_days, platform_id
+            )
+            if not messages:
+                yield event.plain_result("❌ 未找到足够的群聊记录")
+                return
+
+            min_threshold = self.config_manager.get_min_messages_threshold()
+            if len(messages) < min_threshold:
+                yield event.plain_result(
+                    f"❌ 消息数量不足（{len(messages)}条），至少需要{min_threshold}条消息"
+                )
+                return
+
+            history_text = self._format_messages_for_dialogue_prompt(messages)
+            if not history_text:
+                yield event.plain_result("❌ 未提取到可用的文本消息")
+                return
+
+            option_count = 5
+            prompt = self._build_dialogue_poll_prompt(history_text, option_count)
+
+            llm_resp = await call_provider_with_retry(
+                self.context,
+                self.config_manager,
+                prompt,
+                max_tokens=400,
+                temperature=0.9,
+                umo=event.unified_msg_origin,
+                provider_id_key=None,
+            )
+            if not llm_resp:
+                yield event.plain_result("❌ LLM 生成失败，请稍后重试")
+                return
+
+            result_text = extract_response_text(llm_resp)
+            parsed = self._parse_dialogue_poll_json(result_text)
+            if not parsed:
+                yield event.plain_result("❌ 解析投票内容失败，请稍后重试")
+                return
+
+            question, options = parsed
+            options = options[:6]
+
+            poll = Poll(question=question, answers=options, max_selections=1)
+            yield event.chain_result([poll])
+
+        except Exception as e:
+            logger.error(f"对话投票生成失败：{e}", exc_info=True)
+            yield event.plain_result(
+                f"❌ 对话投票生成失败：{str(e)}。请检查网络连接和 LLM 配置"
+            )
+
+    @filter.regex(r"^/?对话投票 (?:\s+(\d+))?$")
+    async def generate_dialogue_poll_regex(self, event: AstrMessageEvent):
+        """兼容未配置 wake_prefix 的指令触发。"""
+        self._ensure_components()
+        if event.is_at_or_wake_command:
+            return
+        if not event.is_admin():
+            yield event.plain_result("❌ 该指令仅管理员可用")
+            return
+        message_str = event.get_message_str().strip().lstrip("/")
+        parts = message_str.split()
+        days = None
+        if len(parts) >= 2 and parts[1].isdigit():
+            days = int(parts[1])
+        async for result in self.generate_dialogue_poll(event, days):
+            yield result
+
     @filter.command("设置格式")
     @filter.permission_type(PermissionType.ADMIN)
-    async def set_output_format(
-        self, event: AstrMessageEvent, format_type: str = ""
-    ):
+    async def set_output_format(self, event: AstrMessageEvent, format_type: str = ""):
         """
         设置分析报告输出格式
         用法：/设置格式 [image|text|pdf]
@@ -413,7 +621,7 @@ class matrixGroupDailyAnalysis(Star):
         self.config_manager.set_output_format(format_type)
         yield event.plain_result(f"✅ 输出格式已设置为：{format_type}")
 
-    @filter.regex(r"^/?设置格式(?:\s+(\S+))?$")
+    @filter.regex(r"^/?设置格式 (?:\s+(\S+))?$")
     async def set_output_format_regex(self, event: AstrMessageEvent):
         """兼容未配置 wake_prefix 的指令触发。"""
         self._ensure_components()
@@ -501,7 +709,7 @@ class matrixGroupDailyAnalysis(Star):
         self.config_manager.set_report_template(template_name)
         yield event.plain_result(f"✅ 报告模板已设置为：{template_name}")
 
-    @filter.regex(r"^/?设置模板(?:\s+(.+))?$")
+    @filter.regex(r"^/?设置模板 (?:\s+(.+))?$")
     async def set_report_template_regex(self, event: AstrMessageEvent):
         """兼容未配置 wake_prefix 的指令触发。"""
         self._ensure_components()
@@ -636,9 +844,7 @@ class matrixGroupDailyAnalysis(Star):
 
     @filter.command("分析设置")
     @filter.permission_type(PermissionType.ADMIN)
-    async def analysis_settings(
-        self, event: AstrMessageEvent, action: str = "status"
-    ):
+    async def analysis_settings(self, event: AstrMessageEvent, action: str = "status"):
         """
         管理分析设置
         用法：/分析设置 [enable|disable|status|reload|test]
@@ -759,7 +965,7 @@ class matrixGroupDailyAnalysis(Star):
 💡 支持的输出格式：image, text, pdf (图片和 PDF 包含活跃度可视化)
 💡 其他命令：/设置格式，/安装 PDF""")
 
-    @filter.regex(r"^/?分析设置(?:\s+(\S+))?$")
+    @filter.regex(r"^/?分析设置 (?:\s+(\S+))?$")
     async def analysis_settings_regex(self, event: AstrMessageEvent):
         """兼容未配置 wake_prefix 的指令触发。"""
         self._ensure_components()
