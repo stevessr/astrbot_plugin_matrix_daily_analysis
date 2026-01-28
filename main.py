@@ -368,23 +368,6 @@ class matrixGroupDailyAnalysis(Star):
                 f"❌ 分析失败：{str(e)}。请检查网络连接和 LLM 配置，或联系管理员"
             )
 
-    @filter.regex(r"^/?群分析 (?:\s+(\d+))?$")
-    async def analyze_group_daily_regex(self, event: AstrMessageEvent):
-        """兼容未配置 wake_prefix 的指令触发。"""
-        self._ensure_components()
-        if event.is_at_or_wake_command:
-            return
-        if not event.is_admin():
-            yield event.plain_result("❌ 该指令仅管理员可用")
-            return
-        message_str = event.get_message_str().strip().lstrip("/")
-        parts = message_str.split()
-        days = None
-        if len(parts) >= 2 and parts[1].isdigit():
-            days = int(parts[1])
-        async for result in self.analyze_group_daily(event, days):
-            yield result
-
     def _format_messages_for_dialogue_prompt(
         self, messages: list[dict], max_messages: int = 120
     ) -> str:
@@ -804,28 +787,6 @@ class matrixGroupDailyAnalysis(Star):
                 f"❌ 对话投票生成失败：{str(e)}。请检查网络连接和 LLM 配置"
             )
 
-    @filter.regex(r"^/?对话投票(?:\s+.*)?$")
-    async def generate_dialogue_poll_regex(self, event: AstrMessageEvent):
-        """兼容未配置 wake_prefix 的指令触发。"""
-        self._ensure_components()
-        if event.is_at_or_wake_command:
-            return
-        if not event.is_admin():
-            yield event.plain_result("❌ 该指令仅管理员可用")
-            return
-        message_str = event.get_message_str().strip().lstrip("/")
-        parts = message_str.split(maxsplit=2)
-        days = None
-        guidance = None
-        if len(parts) >= 2 and parts[1].isdigit():
-            days = int(parts[1])
-            if len(parts) >= 3:
-                guidance = parts[2].strip()
-        elif len(parts) >= 2:
-            guidance = " ".join(parts[1:]).strip()
-        async for result in self.generate_dialogue_poll(event, days, guidance):
-            yield result
-
     @filter.command("设置格式")
     @filter.permission_type(PermissionType.ADMIN)
     async def set_output_format(self, event: AstrMessageEvent, format_type: str = ""):
@@ -872,21 +833,6 @@ class matrixGroupDailyAnalysis(Star):
 
         self.config_manager.set_output_format(format_type)
         yield event.plain_result(f"✅ 输出格式已设置为：{format_type}")
-
-    @filter.regex(r"^/?设置格式 (?:\s+(\S+))?$")
-    async def set_output_format_regex(self, event: AstrMessageEvent):
-        """兼容未配置 wake_prefix 的指令触发。"""
-        self._ensure_components()
-        if event.is_at_or_wake_command:
-            return
-        if not event.is_admin():
-            yield event.plain_result("❌ 该指令仅管理员可用")
-            return
-        message_str = event.get_message_str().strip().lstrip("/")
-        parts = message_str.split(maxsplit=1)
-        format_type = parts[1].strip() if len(parts) > 1 else ""
-        async for result in self.set_output_format(event, format_type):
-            yield result
 
     @filter.command("设置模板")
     @filter.permission_type(PermissionType.ADMIN)
@@ -961,21 +907,6 @@ class matrixGroupDailyAnalysis(Star):
         self.config_manager.set_report_template(template_name)
         yield event.plain_result(f"✅ 报告模板已设置为：{template_name}")
 
-    @filter.regex(r"^/?设置模板 (?:\s+(.+))?$")
-    async def set_report_template_regex(self, event: AstrMessageEvent):
-        """兼容未配置 wake_prefix 的指令触发。"""
-        self._ensure_components()
-        if event.is_at_or_wake_command:
-            return
-        if not event.is_admin():
-            yield event.plain_result("❌ 该指令仅管理员可用")
-            return
-        message_str = event.get_message_str().strip().lstrip("/")
-        parts = message_str.split(maxsplit=1)
-        template_input = parts[1].strip() if len(parts) > 1 else ""
-        async for result in self.set_report_template(event, template_input):
-            yield result
-
     @filter.command("查看模板")
     @filter.permission_type(PermissionType.ADMIN)
     async def view_templates(self, event: AstrMessageEvent):
@@ -1046,18 +977,6 @@ class matrixGroupDailyAnalysis(Star):
             if os.path.exists(preview_image_path):
                 yield event.image_result(preview_image_path)
 
-    @filter.regex(r"^/?查看模板$")
-    async def view_templates_regex(self, event: AstrMessageEvent):
-        """兼容未配置 wake_prefix 的指令触发。"""
-        self._ensure_components()
-        if event.is_at_or_wake_command:
-            return
-        if not event.is_admin():
-            yield event.plain_result("❌ 该指令仅管理员可用")
-            return
-        async for result in self.view_templates(event):
-            yield result
-
     @filter.command("安装 PDF")
     @filter.permission_type(PermissionType.ADMIN)
     async def install_pdf_deps(self, event: AstrMessageEvent):
@@ -1081,18 +1000,6 @@ class matrixGroupDailyAnalysis(Star):
         except Exception as e:
             logger.error(f"安装 PDF 依赖失败：{e}", exc_info=True)
             yield event.plain_result(f"❌ 安装过程中出现错误：{str(e)}")
-
-    @filter.regex(r"^/?安装\s*PDF$")
-    async def install_pdf_deps_regex(self, event: AstrMessageEvent):
-        """兼容未配置 wake_prefix 的指令触发。"""
-        self._ensure_components()
-        if event.is_at_or_wake_command:
-            return
-        if not event.is_admin():
-            yield event.plain_result("❌ 该指令仅管理员可用")
-            return
-        async for result in self.install_pdf_deps(event):
-            yield result
 
     @filter.command("分析设置")
     @filter.permission_type(PermissionType.ADMIN)
@@ -1216,18 +1123,3 @@ class matrixGroupDailyAnalysis(Star):
 💡 可用命令：enable, disable, status, reload, test
 💡 支持的输出格式：image, text, pdf (图片和 PDF 包含活跃度可视化)
 💡 其他命令：/设置格式，/安装 PDF""")
-
-    @filter.regex(r"^/?分析设置 (?:\s+(\S+))?$")
-    async def analysis_settings_regex(self, event: AstrMessageEvent):
-        """兼容未配置 wake_prefix 的指令触发。"""
-        self._ensure_components()
-        if event.is_at_or_wake_command:
-            return
-        if not event.is_admin():
-            yield event.plain_result("❌ 该指令仅管理员可用")
-            return
-        message_str = event.get_message_str().strip().lstrip("/")
-        parts = message_str.split(maxsplit=1)
-        action = parts[1].strip() if len(parts) > 1 else "status"
-        async for result in self.analysis_settings(event, action):
-            yield result
