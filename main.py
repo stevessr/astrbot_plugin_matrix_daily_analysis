@@ -378,6 +378,17 @@ class matrixGroupDailyAnalysis(Star):
         self, messages: list[dict], max_messages: int = 120
     ) -> str:
         """将消息整理为对话提示词文本。"""
+        prefixes = [
+            prefix.lower().strip()
+            for prefix in self.config_manager.get_dialogue_poll_history_filter_prefixes()
+            if isinstance(prefix, str) and prefix.strip()
+        ]
+        user_filters = {
+            user.lower().strip()
+            for user in self.config_manager.get_dialogue_poll_history_filter_users()
+            if isinstance(user, str) and user.strip()
+        }
+        skip_bot = self.config_manager.should_dialogue_poll_skip_bots()
         entries: list[tuple[float, str, str]] = []
         for msg in messages:
             sender = (
@@ -386,11 +397,16 @@ class matrixGroupDailyAnalysis(Star):
                 or "匿名"
             )
             msg_time = msg.get("time", 0) or 0
+            sender_id = str(msg.get("sender", {}).get("user_id") or "").strip()
             for content in msg.get("message", []):
                 if content.get("type") != "text":
                     continue
                 text = content.get("data", {}).get("text", "").strip()
                 if not text:
+                    continue
+                if self._should_skip_history_message(
+                    sender_id, text, prefixes, user_filters, skip_bot
+                ):
                     continue
                 if len(text) > 80:
                     text = text[:77] + "..."
@@ -403,6 +419,26 @@ class matrixGroupDailyAnalysis(Star):
         recent = entries[-max_messages:]
         lines = [f"{sender}: {text}" for _, sender, text in recent]
         return "\n".join(lines)
+
+    def _should_skip_history_message(
+        self,
+        sender_id: str,
+        text: str,
+        prefixes: list[str],
+        user_filters: set[str],
+        skip_bot: bool,
+    ) -> bool:
+        """基于配置决定是否跳过该条历史消息。"""
+        if skip_bot and sender_id and self.bot_manager:
+            if self.bot_manager.should_filter_bot_message(sender_id):
+                return True
+        if sender_id and sender_id.lower() in user_filters:
+            return True
+        lower_text = text.lower().lstrip()
+        for prefix in prefixes:
+            if prefix and lower_text.startswith(prefix):
+                return True
+        return False
 
     def _build_dialogue_poll_prompt(self, history_text: str, option_count: int) -> str:
         """构造对话投票的 LLM 提示词。"""

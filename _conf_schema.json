@@ -240,8 +240,32 @@
                         "description": "对话投票提示词模板",
                         "editor_mode": true,
                         "editor_language": "markdown",
-                        "default": "你是群聊文风模仿器。根据下面的聊天记录，生成一个单选投票：给出一个简短的问题(question)，以及 {option_count} 条候选发言(options)。候选发言必须是‘嘎啦给目’风格，语气俏皮、有点碎碎念，但不要冒犯。不要@具体用户，不要包含隐私或敏感信息。每条候选发言 6-20 字。只输出 JSON 数组，且只包含一个对象，格式如下：[{\"question\":\"...\",\"options\":[\"...\",\"...\"]}]。\\n\\n聊天记录：\\n{history_text}",
+                        "default": "你是群聊文风模仿器。根据下面的聊天记录，生成一个单选投票：给出一个简短的问题 (question)，以及 {option_count} 条候选发言 (options)。候选发言必须是‘嘎啦给目’风格，语气俏皮、有点碎碎念，但不要冒犯。不要@具体用户，不要包含隐私或敏感信息。每条候选发言 6-20 字。只输出 JSON 数组，且只包含一个对象，格式如下：[{\"question\":\"...\",\"options\":[\"...\",\"...\"]}]。\n\n聊天记录：\n{history_text}",
                         "hint": "支持 {option_count} 和 {history_text} 两个变量，格式必须是纯文本，JSON 结构也只能在 LLM 返回值中"
+                    },
+                    "history_filter_prefixes": {
+                        "type": "list",
+                        "description": "历史消息过滤前缀",
+                        "default": [],
+                        "items": {
+                            "type": "string"
+                        },
+                        "hint": "以该前缀开头的消息将不会用于生成投票（支持多个，大小写无关）"
+                    },
+                    "history_filter_users": {
+                        "type": "list",
+                        "description": "历史消息排除用户",
+                        "default": [],
+                        "items": {
+                            "type": "string"
+                        },
+                        "hint": "填写 Matrix 用户 ID（如 @foo:matrix.org），来自这些用户的消息不会参与对话记录"
+                    },
+                    "history_filter_skip_bots": {
+                        "type": "bool",
+                        "description": "跳过机器人发言",
+                        "default": true,
+                        "hint": "是否自动忽略机器人账户（会引用配置中的 bot_matrix_ids）在历史中的发言"
                     }
                 }
             }

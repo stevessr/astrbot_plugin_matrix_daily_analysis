@@ -206,14 +206,6 @@ class ConfigManager:
             ("analysis", "topic", "provider_id"), "", "topic_provider_id"
         )
 
-    def get_dialogue_poll_provider_id(self) -> str:
-        """获取对话投票生成专用 Provider ID"""
-        return self._get_nested(
-            ("analysis", "dialogue_poll", "provider_id"),
-            "",
-            "dialogue_poll_provider_id",
-        )
-
     def get_dialogue_poll_max_tokens(self) -> int:
         """对话投票生成的最大 token 限制"""
         return self._get_nested(
@@ -238,12 +230,28 @@ class ConfigManager:
             "dialogue_poll_prompt",
         )
 
-    def get_dialogue_poll_provider_id(self) -> str:
-        """获取对话投票生成专用 Provider ID"""
+    def get_dialogue_poll_history_filter_prefixes(self) -> list[str]:
+        """获取对话投票历史排除前缀"""
         return self._get_nested(
-            ("analysis", "dialogue_poll", "provider_id"),
-            "",
-            "dialogue_poll_provider_id",
+            ("analysis", "dialogue_poll", "history_filter_prefixes"),
+            [],
+            "dialogue_poll_history_filter_prefixes",
+        )
+
+    def get_dialogue_poll_history_filter_users(self) -> list[str]:
+        """获取对话投票历史排除用户"""
+        return self._get_nested(
+            ("analysis", "dialogue_poll", "history_filter_users"),
+            [],
+            "dialogue_poll_history_filter_users",
+        )
+
+    def should_dialogue_poll_skip_bots(self) -> bool:
+        """判断是否对话投票历史跳过机器人消息"""
+        return self._get_nested(
+            ("analysis", "dialogue_poll", "history_filter_skip_bots"),
+            True,
+            "dialogue_poll_history_filter_skip_bots",
         )
 
     def get_user_title_provider_id(self) -> str:
