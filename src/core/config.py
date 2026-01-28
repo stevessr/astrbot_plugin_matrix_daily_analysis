@@ -224,6 +224,22 @@ class ConfigManager:
         """获取主 LLM Provider ID"""
         return self._get_nested(("llm", "provider_id"), "", "llm_provider_id")
 
+    def get_use_reaction_for_progress(self) -> bool:
+        """是否使用 reaction 替代进度提示"""
+        return self._get_nested(
+            ("interaction", "use_reaction_for_progress"),
+            False,
+            "use_reaction_for_progress",
+        )
+
+    def get_progress_reaction_emoji(self) -> str:
+        """进度提示使用的 reaction 表情"""
+        return self._get_nested(
+            ("interaction", "progress_reaction_emoji"),
+            "🫪",
+            "progress_reaction_emoji",
+        )
+
     def get_topic_provider_id(self) -> str:
         """获取话题分析专用 Provider ID"""
         return self._get_nested(

@@ -669,11 +669,15 @@ class matrixGroupDailyAnalysis(Star):
     @filter.command("对话投票")
     @filter.permission_type(PermissionType.ADMIN)
     async def generate_dialogue_poll(
-        self, event: AstrMessageEvent, days: int | None = None
+        self,
+        event: AstrMessageEvent,
+        days: int | None = None,
+        guidance: str | None = None,
     ):
         """
         根据历史消息生成对话选项并以单选投票发送
-        用法：/对话投票 [天数]
+        用法：/对话投票 [天数] [诱导]
+        说明：诱导为可选补充指令，将被追加到提示词中
         """
         from .src.analysis.utils.llm_utils import (
             call_provider_with_retry,
@@ -704,9 +708,16 @@ class matrixGroupDailyAnalysis(Star):
         analysis_days = (
             days if days and 1 <= days <= 7 else self.config_manager.get_analysis_days()
         )
-        yield event.plain_result(
-            f"🗳️ 正在根据近{analysis_days}天聊天生成对话选项，请稍候..."
-        )
+        progress_text = f"🫪 正在根据近{analysis_days}天聊天生成对话选项，请稍候..."
+        if self.config_manager.get_use_reaction_for_progress():
+            emoji = self.config_manager.get_progress_reaction_emoji() or "🫪"
+            try:
+                await event.react(emoji)
+            except Exception as e:
+                logger.debug(f"发送 progress reaction 失败，回退文本提示：{e}")
+                yield event.plain_result(progress_text)
+        else:
+            yield event.plain_result(progress_text)
 
         try:
             platform_id = await self.auto_scheduler.get_platform_id_for_group(group_id)
@@ -741,6 +752,12 @@ class matrixGroupDailyAnalysis(Star):
             max_options = self.config_manager.get_dialogue_poll_max_options()
             option_count = max(2, min(max_options, 10))
             prompt = self._build_dialogue_poll_prompt(history_text, option_count)
+            guidance_text = (guidance or "").strip()
+            if guidance_text:
+                prompt = (
+                    f"{prompt}\n\n补充要求：\n{guidance_text}\n"
+                    "注意：仍需只输出 JSON 数组。"
+                )
             max_tokens = self.config_manager.get_dialogue_poll_max_tokens()
             llm_resp = await call_provider_with_retry(
                 self.context,
@@ -787,7 +804,7 @@ class matrixGroupDailyAnalysis(Star):
                 f"❌ 对话投票生成失败：{str(e)}。请检查网络连接和 LLM 配置"
             )
 
-    @filter.regex(r"^/?对话投票 (?:\s+(\d+))?$")
+    @filter.regex(r"^/?对话投票(?:\s+.*)?$")
     async def generate_dialogue_poll_regex(self, event: AstrMessageEvent):
         """兼容未配置 wake_prefix 的指令触发。"""
         self._ensure_components()
@@ -797,11 +814,16 @@ class matrixGroupDailyAnalysis(Star):
             yield event.plain_result("❌ 该指令仅管理员可用")
             return
         message_str = event.get_message_str().strip().lstrip("/")
-        parts = message_str.split()
+        parts = message_str.split(maxsplit=2)
         days = None
+        guidance = None
         if len(parts) >= 2 and parts[1].isdigit():
             days = int(parts[1])
-        async for result in self.generate_dialogue_poll(event, days):
+            if len(parts) >= 3:
+                guidance = parts[2].strip()
+        elif len(parts) >= 2:
+            guidance = " ".join(parts[1:]).strip()
+        async for result in self.generate_dialogue_poll(event, days, guidance):
             yield result
 
     @filter.command("设置格式")

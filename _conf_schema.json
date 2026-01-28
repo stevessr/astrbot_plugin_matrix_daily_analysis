@@ -15,9 +15,7 @@
         "description": "群组名单列表",
         "default": [],
         "hint": "黑白名单模式下使用的群号列表",
-        "items": {
-          "type": "string"
-        }
+        "items": { "type": "string" }
       }
     }
   },
@@ -42,9 +40,7 @@
         "description": "群分析时屏蔽的 matrix 号列表",
         "default": [],
         "hint": "填写后可启用自动分析功能。可以填写用于自动分析的机器人 matrix 号、多消息平台 matrix 号、不希望出现于群分析中的其他人的 matrix 号等。",
-        "items": {
-          "type": "string"
-        }
+        "items": { "type": "string" }
       }
     }
   },
@@ -84,18 +80,14 @@
             "type": "list",
             "description": "发送历史消息过滤前缀（全局）",
             "default": [],
-            "items": {
-              "type": "string"
-            },
+            "items": { "type": "string" },
             "hint": "以该前缀开头的消息会跳过分析，支持多个，大小写无关"
           },
           "users": {
             "type": "list",
             "description": "排除用户（Matrix ID）",
             "default": [],
-            "items": {
-              "type": "string"
-            },
+            "items": { "type": "string" },
             "hint": "填写 Matrix ID，例如 @bot:server，会将其历史消息过滤掉"
           },
           "skip_bots": {
@@ -304,6 +296,24 @@
         "description": "LLM 请求重试退避基值（秒）",
         "default": 2,
         "hint": "重试之间的基准等待时间（秒），实际等待时间为基值乘以尝试次数。"
+      }
+    }
+  },
+  "interaction": {
+    "description": "交互设置",
+    "type": "object",
+    "items": {
+      "use_reaction_for_progress": {
+        "type": "bool",
+        "description": "使用 reaction 替代进度提示",
+        "default": false,
+        "hint": "启用后，会使用表情反应代替“正在生成…”等提示消息"
+      },
+      "progress_reaction_emoji": {
+        "type": "string",
+        "description": "进度 reaction 表情",
+        "default": "🫪",
+        "hint": "用于进度提示的表情符号，例如 🫪 或 ⏳"
       }
     }
   },
