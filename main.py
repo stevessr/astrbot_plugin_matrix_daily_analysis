@@ -593,13 +593,13 @@ class matrixGroupDailyAnalysis(Star):
                         e2ee_manager=getattr(event, "e2ee_manager", None),
                         max_selections=1,
                         kind="m.disclosed",
-                        event_type=POLL_EVENT_TYPE_STABLE,
-                        poll_key=POLL_POLL_KEY_STABLE,
+                        event_type=POLL_EVENT_TYPE_UNSTABLE,
+                        poll_key=POLL_POLL_KEY_UNSTABLE,
                     )
-                    logger.info("对话投票已通过 Matrix 客户端发送")
+                    logger.info("对话投票已通过 Matrix 客户端发送（MSC3381）")
                     return True
                 except Exception as e:
-                    logger.warning(f"发送投票失败，尝试回退到旧事件类型：{e}")
+                    logger.warning(f"发送投票失败，尝试回退到稳定事件类型：{e}")
 
                 try:
                     await _send_poll(
@@ -614,13 +614,13 @@ class matrixGroupDailyAnalysis(Star):
                         e2ee_manager=getattr(event, "e2ee_manager", None),
                         max_selections=1,
                         kind="m.disclosed",
-                        event_type=POLL_EVENT_TYPE_UNSTABLE,
-                        poll_key=POLL_POLL_KEY_UNSTABLE,
+                        event_type=POLL_EVENT_TYPE_STABLE,
+                        poll_key=POLL_POLL_KEY_STABLE,
                     )
-                    logger.info("对话投票已通过 Matrix 客户端发送（旧事件类型）")
+                    logger.info("对话投票已通过 Matrix 客户端发送（稳定事件类型）")
                     return True
                 except Exception as e:
-                    logger.error(f"发送投票失败（旧事件类型仍失败）：{e}")
+                    logger.error(f"发送投票失败（稳定事件类型仍失败）：{e}")
                     return False
             except Exception as e:
                 logger.debug(f"Matrix 客户端投票发送路径不可用：{e}")
@@ -643,13 +643,13 @@ class matrixGroupDailyAnalysis(Star):
                 question=question,
                 answers=options,
                 max_selections=1,
-                event_type=POLL_EVENT_TYPE_STABLE,
-                poll_key=POLL_POLL_KEY_STABLE,
+                event_type=POLL_EVENT_TYPE_UNSTABLE,
+                poll_key=POLL_POLL_KEY_UNSTABLE,
             )
-            logger.info("对话投票已通过 Matrix 适配器发送")
+            logger.info("对话投票已通过 Matrix 适配器发送（MSC3381）")
             return True
         except Exception as e:
-            logger.warning(f"发送投票失败，尝试回退到旧事件类型：{e}")
+            logger.warning(f"发送投票失败，尝试回退到稳定事件类型：{e}")
 
         try:
             await sender.send_poll(
@@ -657,10 +657,10 @@ class matrixGroupDailyAnalysis(Star):
                 question=question,
                 answers=options,
                 max_selections=1,
-                event_type=POLL_EVENT_TYPE_UNSTABLE,
-                poll_key=POLL_POLL_KEY_UNSTABLE,
+                event_type=POLL_EVENT_TYPE_STABLE,
+                poll_key=POLL_POLL_KEY_STABLE,
             )
-            logger.info("对话投票已通过 Matrix 适配器发送（旧事件类型）")
+            logger.info("对话投票已通过 Matrix 适配器发送（稳定事件类型）")
             return True
         except Exception as e:
             logger.error(f"发送投票失败（回退事件类型仍失败）：{e}")
