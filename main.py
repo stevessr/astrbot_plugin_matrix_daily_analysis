@@ -436,9 +436,15 @@ class matrixGroupDailyAnalysis(Star):
         try:
             data = json.loads(json_text)
         except Exception as e:
-            logger.warning(
-                f"对话投票 JSON 解析失败：{e} | raw={text} | cleaned={json_text}"
-            )
+            try:
+                json_text_alt = json_text.replace('\\"', '"')
+                data = json.loads(json_text_alt)
+            except Exception:
+                logger.warning(
+                    f"对话投票 JSON 解析失败：{e} | raw={text} | cleaned={json_text}"
+                )
+                data = None
+        if data is None:
             return None
         if not isinstance(data, list) or not data:
             logger.warning("对话投票 JSON 内容异常（非列表或空）")
@@ -469,6 +475,29 @@ class matrixGroupDailyAnalysis(Star):
             return None
         return question, options
 
+    def _parse_dialogue_poll_json_fallback(self, text: str) -> tuple[str, list[str]] | None:
+        """在 JSON 解析失败时尝试关键词提取 question/options。"""
+        question_match = re.search(r'"question"\s*:\s*"([^"]+)"', text)
+        options_match = re.search(r'"options"\s*:\s*\[([^\]]+)\]', text)
+        if not question_match or not options_match:
+            return None
+        question = question_match.group(1).strip()
+        candidate_block = options_match.group(1)
+        options = []
+        seen = set()
+        for item in re.findall(r'"([^"]+)"', candidate_block):
+            clean = item.strip()
+            if not clean or clean in seen:
+                continue
+            seen.add(clean)
+            if len(clean) > 32:
+                clean = clean[:29] + "..."
+            options.append(clean)
+        if not question:
+            question = "请选择下一句"
+        if len(options) < 2:
+            return None
+        return question, options
     @filter.command("对话投票")
     @filter.permission_type(PermissionType.ADMIN)
     async def generate_dialogue_poll(
@@ -560,6 +589,8 @@ class matrixGroupDailyAnalysis(Star):
 
             result_text = extract_response_text(llm_resp)
             parsed = self._parse_dialogue_poll_json(result_text)
+            if not parsed:
+                parsed = self._parse_dialogue_poll_json_fallback(result_text)
             if not parsed:
                 logger.warning("对话投票解析失败，LLM 输出：%s", result_text[:100])
                 yield event.plain_result("❌ 解析投票内容失败，请稍后重试")
