@@ -26,6 +26,13 @@ from .src.scheduler.retry import RetryManager
 from .src.utils.helpers import MessageAnalyzer
 from .src.utils.pdf_utils import PDFInstaller
 
+DEFAULT_DIALOGUE_POLL_PROMPT = (
+    "你是群聊文风模仿器。根据下面的聊天记录，生成一个单选投票：给出一个简短的问题(question)，"
+    "以及 {option_count} 条候选发言(options)。候选发言必须是‘嘎啦给目’风格，语气俏皮、有点碎碎念，但不要冒犯。"
+    "不要@具体用户，不要包含隐私或敏感信息。每条候选发言 6-20 字。只输出 JSON 数组，且只包含一个对象，"
+    "格式如下：[{\"question\":\"...\",\"options\":[\"...\",\"...\"]}]。\\n\\n聊天记录：\\n{history_text}"
+)
+
 
 class matrixGroupDailyAnalysis(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
@@ -399,17 +406,14 @@ class matrixGroupDailyAnalysis(Star):
 
     def _build_dialogue_poll_prompt(self, history_text: str, option_count: int) -> str:
         """构造对话投票的 LLM 提示词。"""
-        return (
-            "你是群聊文风模仿器。根据下面的聊天记录，生成一个单选投票："
-            f"给出一个简短的问题 (question)，以及 {option_count} 条候选发言 (options)。"
-            "候选发言必须是‘嘎啦给目’风格，语气俏皮、有点碎碎念，但不要冒犯。"
-            "不要@具体用户，不要包含隐私或敏感信息。"
-            "每条候选发言 6-20 字。"
-            "只输出 JSON 数组，且只包含一个对象，格式如下："
-            '[{"question":"...","options":["...","..."]}]'
-            "\n\n聊天记录：\n"
-            f"{history_text}"
-        )
+        template = self.config_manager.get_dialogue_poll_prompt() or DEFAULT_DIALOGUE_POLL_PROMPT
+        try:
+            return template.format(option_count=option_count, history_text=history_text)
+        except Exception as e:
+            logger.warning(f"对话投票提示词格式化失败，回退默认提示词：{e}")
+            return DEFAULT_DIALOGUE_POLL_PROMPT.format(
+                option_count=option_count, history_text=history_text
+            )
 
     def _parse_dialogue_poll_json(self, text: str) -> tuple[str, list[str]] | None:
         """解析 LLM 输出的投票 JSON。"""
@@ -523,17 +527,18 @@ class matrixGroupDailyAnalysis(Star):
                 yield event.plain_result("❌ 未提取到可用的文本消息")
                 return
 
-            option_count = 5
+            max_options = self.config_manager.get_dialogue_poll_max_options()
+            option_count = max(2, min(max_options, 10))
             prompt = self._build_dialogue_poll_prompt(history_text, option_count)
-
+            max_tokens = self.config_manager.get_dialogue_poll_max_tokens()
             llm_resp = await call_provider_with_retry(
                 self.context,
                 self.config_manager,
                 prompt,
-                max_tokens=400,
+                max_tokens=max_tokens,
                 temperature=0.9,
                 umo=event.unified_msg_origin,
-                provider_id_key=None,
+                provider_id_key="dialogue_poll_provider_id",
             )
             if not llm_resp:
                 yield event.plain_result("❌ LLM 生成失败，请稍后重试")
@@ -546,7 +551,7 @@ class matrixGroupDailyAnalysis(Star):
                 return
 
             question, options = parsed
-            options = options[:6]
+            options = options[:option_count]
 
             poll = Poll(question=question, answers=options, max_selections=1)
             yield event.chain_result([poll])

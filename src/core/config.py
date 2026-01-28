@@ -31,7 +31,9 @@ class ConfigManager:
         self._check_playwright_availability()
         self._sentinel = object()
 
-    def _get_nested(self, path: tuple[str, ...], default=None, legacy_key: str | None = None):
+    def _get_nested(
+        self, path: tuple[str, ...], default=None, legacy_key: str | None = None
+    ):
         if legacy_key is not None:
             legacy_value = self.config.get(legacy_key, self._sentinel)
             if legacy_value is not self._sentinel:
@@ -108,7 +110,9 @@ class ConfigManager:
 
     def get_auto_analysis_time(self) -> str:
         """获取自动分析时间"""
-        return self._get_nested(("auto_analysis", "time"), "09:00", "auto_analysis_time")
+        return self._get_nested(
+            ("auto_analysis", "time"), "09:00", "auto_analysis_time"
+        )
 
     def get_enable_auto_analysis(self) -> bool:
         """获取是否启用自动分析"""
@@ -141,7 +145,9 @@ class ConfigManager:
     def get_golden_quote_analysis_enabled(self) -> bool:
         """获取是否启用金句分析"""
         return self._get_nested(
-            ("analysis", "golden_quote", "enabled"), True, "golden_quote_analysis_enabled"
+            ("analysis", "golden_quote", "enabled"),
+            True,
+            "golden_quote_analysis_enabled",
         )
 
     def get_max_topics(self) -> int:
@@ -198,6 +204,46 @@ class ConfigManager:
         """获取话题分析专用 Provider ID"""
         return self._get_nested(
             ("analysis", "topic", "provider_id"), "", "topic_provider_id"
+        )
+
+    def get_dialogue_poll_provider_id(self) -> str:
+        """获取对话投票生成专用 Provider ID"""
+        return self._get_nested(
+            ("analysis", "dialogue_poll", "provider_id"),
+            "",
+            "dialogue_poll_provider_id",
+        )
+
+    def get_dialogue_poll_max_tokens(self) -> int:
+        """对话投票生成的最大 token 限制"""
+        return self._get_nested(
+            ("analysis", "dialogue_poll", "max_tokens"),
+            400,
+            "dialogue_poll_max_tokens",
+        )
+
+    def get_dialogue_poll_max_options(self) -> int:
+        """对话投票生成的候选数量"""
+        return self._get_nested(
+            ("analysis", "dialogue_poll", "max_options"),
+            5,
+            "dialogue_poll_max_options",
+        )
+
+    def get_dialogue_poll_prompt(self) -> str:
+        """对话投票生成的提示词模板"""
+        return self._get_nested(
+            ("analysis", "dialogue_poll", "prompt"),
+            """你是群聊文风模仿器。根据下面的聊天记录，生成一个单选投票：给出一个简短的问题 (question)，以及 {option_count} 条候选发言 (options)。候选发言必须是‘嘎啦给目’风格，语气俏皮、有点碎碎念，但不要冒犯。不要@具体用户，不要包含隐私或敏感信息。每条候选发言 6-20 字。只输出 JSON 数组，且只包含一个对象，格式如下：[{\"question\":\"...\",\"options\":[\"...\",\"...\"]}]。\\n\\n聊天记录：\\n{history_text}""",
+            "dialogue_poll_prompt",
+        )
+
+    def get_dialogue_poll_provider_id(self) -> str:
+        """获取对话投票生成专用 Provider ID"""
+        return self._get_nested(
+            ("analysis", "dialogue_poll", "provider_id"),
+            "",
+            "dialogue_poll_provider_id",
         )
 
     def get_user_title_provider_id(self) -> str:
@@ -268,7 +314,9 @@ class ConfigManager:
         )
         # 获取指定的 prompt
         if isinstance(prompts_config, dict):
-            prompt = prompts_config.get(style) or prompts_config.get("user_title_prompt")
+            prompt = prompts_config.get(style) or prompts_config.get(
+                "user_title_prompt"
+            )
             if prompt:
                 return prompt
         # 兼容旧配置
@@ -292,7 +340,9 @@ class ConfigManager:
         )
         # 获取指定的 prompt
         if isinstance(prompts_config, dict):
-            prompt = prompts_config.get(style) or prompts_config.get("golden_quote_prompt")
+            prompt = prompts_config.get(style) or prompts_config.get(
+                "golden_quote_prompt"
+            )
             if prompt:
                 return prompt
         # 兼容旧配置
@@ -304,7 +354,9 @@ class ConfigManager:
 
     def set_user_title_analysis_prompt(self, prompt: str):
         """设置用户称号分析提示词模板"""
-        self._set_nested(("analysis", "user_title", "prompts", "user_title_prompt"), prompt)
+        self._set_nested(
+            ("analysis", "user_title", "prompts", "user_title_prompt"), prompt
+        )
 
     def set_golden_quote_analysis_prompt(self, prompt: str):
         """设置金句分析提示词模板"""
@@ -371,7 +423,6 @@ class ConfigManager:
     def set_max_golden_quotes(self, count: int):
         """设置最大金句数量"""
         self._set_nested(("analysis", "golden_quote", "max_quotes"), count)
-
 
     def set_pdf_filename_format(self, format_str: str):
         """设置 PDF 文件名格式"""

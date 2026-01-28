@@ -41,6 +41,8 @@ _✨ 基于 AstrBot 的 Matrix 群聊日常分析插件，生成结构化统计�
 - `analysis`：分析参数
   - `days` / `max_messages` / `min_messages_threshold` / `max_concurrent_tasks`
   - `topic` / `user_title` / `golden_quote`（含 enabled / max_* / max_tokens / provider_id / prompts）
+  - `dialogue_poll`（含 provider_id、max_tokens、max_options、prompt，控制 `/对话投票`）
+  - `dialogue_poll`（含 provider_id，用于 `/对话投票` 命令）
 - `llm`：通用 LLM 设置
   - `provider_id` / `timeout` / `retries` / `backoff`
 - `output`：输出设置
