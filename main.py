@@ -551,7 +551,9 @@ class matrixGroupDailyAnalysis(Star):
         """构建投票失败时的文本回退内容。"""
         safe_question = (question or "").strip() or "请选择"
         lines = [safe_question]
-        lines.extend([f"{idx + 1}. {opt}" for idx, opt in enumerate(options or []) if opt])
+        lines.extend(
+            [f"{idx + 1}. {opt}" for idx, opt in enumerate(options or []) if opt]
+        )
         return "\n".join(lines).strip()
 
     async def _send_dialogue_poll_via_adapter(
@@ -563,6 +565,66 @@ class matrixGroupDailyAnalysis(Star):
         options: list[str],
     ) -> bool | None:
         """优先通过 Matrix 适配器直接发送投票。"""
+        if hasattr(event, "client") and getattr(event, "client"):
+            try:
+                from astrbot_plugin_matrix_adapter.sender.handlers.poll import (
+                    send_poll as _send_poll,
+                )
+
+                is_encrypted_room = False
+                if hasattr(event, "e2ee_manager") and event.e2ee_manager:
+                    try:
+                        is_encrypted_room = await event.client.is_room_encrypted(
+                            room_id
+                        )
+                    except Exception as e:
+                        logger.debug(f"检查房间加密状态失败：{e}")
+
+                try:
+                    await _send_poll(
+                        event.client,
+                        room_id,
+                        question,
+                        options,
+                        reply_to=None,
+                        thread_root=None,
+                        use_thread=False,
+                        is_encrypted_room=is_encrypted_room,
+                        e2ee_manager=getattr(event, "e2ee_manager", None),
+                        max_selections=1,
+                        kind="m.disclosed",
+                        event_type=POLL_EVENT_TYPE_STABLE,
+                        poll_key=POLL_POLL_KEY_STABLE,
+                    )
+                    logger.info("对话投票已通过 Matrix 客户端发送")
+                    return True
+                except Exception as e:
+                    logger.warning(f"发送投票失败，尝试回退到旧事件类型：{e}")
+
+                try:
+                    await _send_poll(
+                        event.client,
+                        room_id,
+                        question,
+                        options,
+                        reply_to=None,
+                        thread_root=None,
+                        use_thread=False,
+                        is_encrypted_room=is_encrypted_room,
+                        e2ee_manager=getattr(event, "e2ee_manager", None),
+                        max_selections=1,
+                        kind="m.disclosed",
+                        event_type=POLL_EVENT_TYPE_UNSTABLE,
+                        poll_key=POLL_POLL_KEY_UNSTABLE,
+                    )
+                    logger.info("对话投票已通过 Matrix 客户端发送（旧事件类型）")
+                    return True
+                except Exception as e:
+                    logger.error(f"发送投票失败（旧事件类型仍失败）：{e}")
+                    return False
+            except Exception as e:
+                logger.debug(f"Matrix 客户端投票发送路径不可用：{e}")
+
         platform = None
         if self.bot_manager:
             platform = self.bot_manager.get_platform(
@@ -584,6 +646,7 @@ class matrixGroupDailyAnalysis(Star):
                 event_type=POLL_EVENT_TYPE_STABLE,
                 poll_key=POLL_POLL_KEY_STABLE,
             )
+            logger.info("对话投票已通过 Matrix 适配器发送")
             return True
         except Exception as e:
             logger.warning(f"发送投票失败，尝试回退到旧事件类型：{e}")
@@ -597,6 +660,7 @@ class matrixGroupDailyAnalysis(Star):
                 event_type=POLL_EVENT_TYPE_UNSTABLE,
                 poll_key=POLL_POLL_KEY_UNSTABLE,
             )
+            logger.info("对话投票已通过 Matrix 适配器发送（旧事件类型）")
             return True
         except Exception as e:
             logger.error(f"发送投票失败（回退事件类型仍失败）：{e}")
