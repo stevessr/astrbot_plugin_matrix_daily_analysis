@@ -689,6 +689,9 @@ class matrixGroupDailyAnalysis(Star):
         用法：/对话投票 [天数] [诱导]
         说明：诱导为可选补充指令，将被追加到提示词中
         """
+        # Block default chat replies once this command is handled.
+        event.call_llm = True
+        event.stop_event()
         from .src.analysis.utils.llm_utils import (
             call_provider_with_retry,
             extract_response_text,
@@ -820,6 +823,7 @@ class matrixGroupDailyAnalysis(Star):
 
             poll = Poll(question=question, answers=options, max_selections=1)
             yield event.chain_result([poll])
+            return
 
         except Exception as e:
             logger.error(f"对话投票生成失败：{e}", exc_info=True)
