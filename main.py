@@ -170,6 +170,11 @@ class matrixGroupDailyAnalysis(Star):
         用法：/群分析 [天数]
         """
         self._ensure_components()
+        if self.config_manager is None:
+            self._ensure_components()
+        if self.config_manager is None:
+            yield event.plain_result("❌ 配置初始化失败，请重启插件后重试")
+            return
         platform_name = event.get_platform_name()
         if platform_name != "matrix":
             yield event.plain_result("❌ 此功能仅支持 Matrix 群聊/房间")
@@ -703,6 +708,11 @@ class matrixGroupDailyAnalysis(Star):
             yield event.plain_result(progress_text)
 
         try:
+            if self.config_manager is None:
+                self._ensure_components()
+            if self.config_manager is None:
+                yield event.plain_result("❌ 配置初始化失败，请重启插件后重试")
+                return
             platform_id = await self.auto_scheduler.get_platform_id_for_group(group_id)
             if not platform_id and hasattr(event, "get_platform_id"):
                 platform_id = event.get_platform_id()
