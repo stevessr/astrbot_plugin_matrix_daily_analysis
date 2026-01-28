@@ -692,6 +692,7 @@ class matrixGroupDailyAnalysis(Star):
         # Block default chat replies once this command is handled.
         event.should_call_llm(True)
         event.stop_event()
+        event._has_send_oper = True
         from .src.analysis.utils.llm_utils import (
             call_provider_with_retry,
             extract_response_text,
