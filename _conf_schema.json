@@ -280,22 +280,28 @@
           "max_tokens": {
             "type": "int",
             "description": "个人报告最大 Token 数",
-            "default": 800,
+            "default": 32767,
             "hint": "控制 LLM 响应长度，个人报告通常较短，建议 500~1000"
           },
           "max_messages": {
             "type": "int",
             "description": "分析的最大消息数",
-            "default": 100,
+            "default": 1000,
             "hint": "用于 LLM 分析的用户消息数量上限，过多可能导致 token 超限"
           },
-          "prompt": {
-            "type": "text",
+          "prompts": {
             "description": "个人报告提示词模板",
-            "editor_mode": true,
-            "editor_language": "markdown",
-            "default": "",
-            "hint": "自定义个人报告的 LLM 提示词。支持 {messages} 变量。留空使用默认提示词"
+            "type": "object",
+            "hint": "个人报告提示词模板，可自定义修改。支持变量 {messages}（用户消息列表）。需要写 JSON 块请使用双花括号 {{ ... }}",
+            "items": {
+              "personal_report_prompt": {
+                "description": "默认个人报告提示词",
+                "type": "text",
+                "editor_mode": true,
+                "editor_language": "markdown",
+                "default": "你是一个群聊分析助手。请分析以下用户在群聊中的发言，生成一份简短有趣的个人画像报告。\n\n## 用户消息样本：\n\n{messages}\n\n---\n\n## 请分析并输出以下内容：\n\n1. **说话风格**：用 2-3 句话描述该用户的说话风格和特点（如：幽默、专业、活跃、沉稳等）\n2. **兴趣爱好**：根据发言话题推断用户可能的兴趣爱好（列出 2-4 个）\n3. **群聊称号**：给用户一个有趣且贴切的群聊称号（如：技术大佬、表情包狂魔、深夜话痨等）\n4. **一句话总结**：用一句有趣的话总结这个用户\n\n## 输出要求：\n\n- 语言简洁有趣，带有一点调侃但不冒犯\n- 不要使用 markdown 格式\n- 直接输出分析内容，不需要额外的开场白\n- 称号要有创意，可以结合用户的发言特点"
+              }
+            }
           }
         }
       }

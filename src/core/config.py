@@ -302,11 +302,21 @@ class ConfigManager:
 
     def get_personal_report_prompt(self) -> str:
         """获取个人报告分析提示词模板"""
-        return self._get_nested(
+        # 先尝试从 prompts 对象中获取
+        prompts_config = self._get_nested(
+            ("analysis", "personal_report", "prompts"), {}, "personal_report_prompts"
+        )
+        if isinstance(prompts_config, dict):
+            prompt = prompts_config.get("personal_report_prompt")
+            if prompt:
+                return prompt
+        # 兼容旧配置（直接使用 prompt 字段）
+        legacy_prompt = self._get_nested(
             ("analysis", "personal_report", "prompt"),
             "",
             "personal_report_prompt",
         )
+        return legacy_prompt or ""
 
     def get_reports_dir(self):
         """获取报告输出目录（固定为插件数据目录）"""
