@@ -214,7 +214,17 @@ class matrixGroupDailyAnalysis(Star):
             days if days and 1 <= days <= 7 else self.config_manager.get_analysis_days()
         )
 
-        yield event.plain_result(f"🔍 开始分析群聊近{analysis_days}天的活动，请稍候...")
+        # 发送进度提示
+        progress_text = f"🔍 开始分析群聊近{analysis_days}天的活动，请稍候..."
+        if self.config_manager.get_use_reaction_for_progress():
+            emoji = self.config_manager.get_progress_reaction_emoji() or "🔍"
+            try:
+                await event.react(emoji)
+            except Exception as e:
+                logger.debug(f"发送 progress reaction 失败，回退文本提示：{e}")
+                yield event.plain_result(progress_text)
+        else:
+            yield event.plain_result(progress_text)
 
         # 调试：输出当前配置
         logger.info(f"当前输出格式配置：{self.config_manager.get_output_format()}")
@@ -250,9 +260,13 @@ class matrixGroupDailyAnalysis(Star):
                 )
                 return
 
-            yield event.plain_result(
-                f"📊 已获取{len(messages)}条消息，正在进行智能分析..."
-            )
+            # 发送分析进度提示
+            analyzing_text = f"📊 已获取{len(messages)}条消息，正在进行智能分析..."
+            if self.config_manager.get_use_reaction_for_progress():
+                # 使用 reaction 时不发送文本，保持安静
+                pass
+            else:
+                yield event.plain_result(analyzing_text)
 
             # 进行分析 - 传递 unified_msg_origin 以获取正确的 LLM 提供商
             analysis_result = await self.message_analyzer.analyze_messages(
@@ -604,7 +618,17 @@ class matrixGroupDailyAnalysis(Star):
             days if days and 1 <= days <= 7 else self.config_manager.get_analysis_days()
         )
 
-        yield event.plain_result(f"🔍 开始分析您近{analysis_days}天的群聊活动，请稍候...")
+        # 发送进度提示
+        progress_text = f"🔍 开始分析您近{analysis_days}天的群聊活动，请稍候..."
+        if self.config_manager.get_use_reaction_for_progress():
+            emoji = self.config_manager.get_progress_reaction_emoji() or "🔍"
+            try:
+                await event.react(emoji)
+            except Exception as e:
+                logger.debug(f"发送 progress reaction 失败，回退文本提示：{e}")
+                yield event.plain_result(progress_text)
+        else:
+            yield event.plain_result(progress_text)
 
         try:
             # 获取该群对应的平台 ID 和 bot 实例
@@ -649,9 +673,13 @@ class matrixGroupDailyAnalysis(Star):
                 )
                 return
 
-            yield event.plain_result(
-                f"📊 已获取您的{len(user_messages)}条消息，正在进行智能分析..."
-            )
+            # 发送分析进度提示
+            analyzing_text = f"📊 已获取您的{len(user_messages)}条消息，正在进行智能分析..."
+            if self.config_manager.get_use_reaction_for_progress():
+                # 使用 reaction 时不发送文本，保持安静
+                pass
+            else:
+                yield event.plain_result(analyzing_text)
 
             # 进行个人分析
             personal_report = await self.personal_report_handler.generate_personal_report(
