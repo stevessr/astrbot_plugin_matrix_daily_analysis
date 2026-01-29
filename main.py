@@ -87,9 +87,7 @@ class matrixGroupDailyAnalysis(Star):
             self.retry_manager,
             self.bot_manager,
         )
-        self.settings_handler = SettingsHandler(
-            self.config_manager, self._plugin_dir
-        )
+        self.settings_handler = SettingsHandler(self.config_manager, self._plugin_dir)
 
     def _ensure_components(self):
         """在热重载或异常后恢复核心组件。"""
@@ -281,7 +279,10 @@ class matrixGroupDailyAnalysis(Star):
             # 生成报告
             output_format = self.config_manager.get_output_format()
             if output_format == "image":
-                success, message = await self.group_analysis_handler.handle_image_report(
+                (
+                    success,
+                    message,
+                ) = await self.group_analysis_handler.handle_image_report(
                     event, analysis_result, group_id, self.html_render
                 )
                 if message:
@@ -294,7 +295,9 @@ class matrixGroupDailyAnalysis(Star):
                 if message:
                     yield event.plain_result(message)
             else:
-                text_report = self.group_analysis_handler.handle_text_report(analysis_result)
+                text_report = self.group_analysis_handler.handle_text_report(
+                    analysis_result
+                )
                 yield event.plain_result(text_report)
 
         except Exception as e:
@@ -385,14 +388,18 @@ class matrixGroupDailyAnalysis(Star):
                 )
                 return
 
-            history_text = self.dialogue_poll_handler.format_messages_for_dialogue_prompt(messages)
+            history_text = (
+                self.dialogue_poll_handler.format_messages_for_dialogue_prompt(messages)
+            )
             if not history_text:
                 yield event.plain_result("❌ 未提取到可用的文本消息")
                 return
 
             max_options = self.config_manager.get_dialogue_poll_max_options()
             option_count = max(2, min(max_options, 10))
-            prompt = self.dialogue_poll_handler.build_dialogue_poll_prompt(history_text, option_count)
+            prompt = self.dialogue_poll_handler.build_dialogue_poll_prompt(
+                history_text, option_count
+            )
             guidance_text = (guidance or "").strip()
             if guidance_text:
                 prompt = (
@@ -416,7 +423,9 @@ class matrixGroupDailyAnalysis(Star):
             result_text = extract_response_text(llm_resp)
             parsed = self.dialogue_poll_handler.parse_dialogue_poll_json(result_text)
             if not parsed:
-                parsed = self.dialogue_poll_handler.parse_dialogue_poll_json_fallback(result_text)
+                parsed = self.dialogue_poll_handler.parse_dialogue_poll_json_fallback(
+                    result_text
+                )
             if not parsed:
                 logger.warning("对话投票解析失败，LLM 输出：%s", result_text[:100])
                 yield event.plain_result("❌ 解析投票内容失败，请稍后重试")
@@ -431,7 +440,9 @@ class matrixGroupDailyAnalysis(Star):
                 event._has_send_oper = True
                 return
             if sent is False:
-                fallback_text = self.dialogue_poll_handler.build_poll_fallback_text(question, options)
+                fallback_text = self.dialogue_poll_handler.build_poll_fallback_text(
+                    question, options
+                )
                 yield event.plain_result(
                     f"⚠️ Matrix 投票发送失败，已转为文本格式：\n{fallback_text}"
                 )
@@ -439,7 +450,9 @@ class matrixGroupDailyAnalysis(Star):
             poll_components = _import_matrix_adapter_module("components")
             Poll = getattr(poll_components, "Poll", None) if poll_components else None
             if Poll is None:
-                fallback_text = self.dialogue_poll_handler.build_poll_fallback_text(question, options)
+                fallback_text = self.dialogue_poll_handler.build_poll_fallback_text(
+                    question, options
+                )
                 yield event.plain_result(
                     f"⚠️ 未检测到 Matrix 适配器投票组件，已转为文本格式：\n{fallback_text}"
                 )
@@ -553,7 +566,9 @@ class matrixGroupDailyAnalysis(Star):
             yield event.plain_result(f"{num_label} {template_name}{current_mark}")
 
             # 添加预览图
-            preview_path = self.settings_handler.get_template_preview_path(template_name)
+            preview_path = self.settings_handler.get_template_preview_path(
+                template_name
+            )
             if preview_path:
                 yield event.image_result(preview_path)
 
@@ -576,12 +591,10 @@ class matrixGroupDailyAnalysis(Star):
         yield event.plain_result(result)
 
     @filter.command("我的群报告")
-    async def my_group_report(
-        self, event: AstrMessageEvent, days: int | None = None
-    ):
+    async def my_group_report(self, event: AstrMessageEvent, days: int = 7):
         """
         获取自己在群聊中的分析报告
-        用法：/我的群报告 [天数]
+        用法：/我的群报告 [天数=7]
         """
         self._ensure_components()
         if self.config_manager is None:
@@ -613,10 +626,7 @@ class matrixGroupDailyAnalysis(Star):
             yield event.plain_result("❌ 此群未启用日常分析功能")
             return
 
-        # 设置分析天数
-        analysis_days = (
-            days if days and 1 <= days <= 7 else self.config_manager.get_analysis_days()
-        )
+        analysis_days = max(1, days)
 
         # 发送进度提示
         progress_text = f"🔍 开始分析您近{analysis_days}天的群聊活动，请稍候..."
@@ -644,8 +654,10 @@ class matrixGroupDailyAnalysis(Star):
                 return
 
             # 获取群聊消息
-            all_messages = await self.message_analyzer.message_handler.fetch_group_messages(
-                bot_instance, group_id, analysis_days, platform_id
+            all_messages = (
+                await self.message_analyzer.message_handler.fetch_group_messages(
+                    bot_instance, group_id, analysis_days, platform_id
+                )
             )
             if not all_messages:
                 yield event.plain_result(
@@ -655,7 +667,8 @@ class matrixGroupDailyAnalysis(Star):
 
             # 过滤只保留当前用户的消息
             user_messages = [
-                msg for msg in all_messages
+                msg
+                for msg in all_messages
                 if msg.get("sender", {}).get("user_id") == current_user_id
             ]
 
@@ -666,7 +679,9 @@ class matrixGroupDailyAnalysis(Star):
                 return
 
             # 检查消息数量是否足够分析
-            min_threshold = max(5, self.config_manager.get_min_messages_threshold() // 5)
+            min_threshold = max(
+                5, self.config_manager.get_min_messages_threshold() // 5
+            )
             if len(user_messages) < min_threshold:
                 yield event.plain_result(
                     f"❌ 您的消息数量不足（{len(user_messages)}条），至少需要{min_threshold}条消息才能进行有效分析"
@@ -674,7 +689,9 @@ class matrixGroupDailyAnalysis(Star):
                 return
 
             # 发送分析进度提示
-            analyzing_text = f"📊 已获取您的{len(user_messages)}条消息，正在进行智能分析..."
+            analyzing_text = (
+                f"📊 已获取您的{len(user_messages)}条消息，正在进行智能分析..."
+            )
             if self.config_manager.get_use_reaction_for_progress():
                 # 使用 reaction 时不发送文本，保持安静
                 pass
@@ -682,8 +699,10 @@ class matrixGroupDailyAnalysis(Star):
                 yield event.plain_result(analyzing_text)
 
             # 进行个人分析
-            personal_report = await self.personal_report_handler.generate_personal_report(
-                user_messages, current_user_id, event.unified_msg_origin
+            personal_report = (
+                await self.personal_report_handler.generate_personal_report(
+                    user_messages, current_user_id, event.unified_msg_origin
+                )
             )
 
             if not personal_report:
@@ -756,4 +775,6 @@ class matrixGroupDailyAnalysis(Star):
                 yield event.plain_result(f"❌ 自动分析测试失败：{str(e)}")
 
         else:  # status
-            yield event.plain_result(self.settings_handler.get_analysis_status(group_id))
+            yield event.plain_result(
+                self.settings_handler.get_analysis_status(group_id)
+            )
