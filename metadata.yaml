@@ -16,6 +16,6 @@ help: |  # 插件的帮助信息
   /我的群报告 [天数=7] - 获取个人群聊分析报告（所有用户可用）
   /分析设置 [操作] - 管理设置（enable/disable/status/test）
   /对话投票 [天数] - 生成对话单选投票
-version: v0.0.1
+version: v0.0.2
 author: stevessr
 repo: https://github.com/stevessr/astrbot_plugin_matrix_daily_analysis # 插件的仓库地址
