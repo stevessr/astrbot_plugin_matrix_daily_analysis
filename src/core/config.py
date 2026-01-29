@@ -282,6 +282,32 @@ class ConfigManager:
             ("analysis", "golden_quote", "provider_id"), "", "golden_quote_provider_id"
         )
 
+    def get_personal_report_provider_id(self) -> str:
+        """获取个人报告分析专用 Provider ID"""
+        return self._get_nested(
+            ("analysis", "personal_report", "provider_id"), "", "personal_report_provider_id"
+        )
+
+    def get_personal_report_max_tokens(self) -> int:
+        """获取个人报告分析最大 token 数"""
+        return self._get_nested(
+            ("analysis", "personal_report", "max_tokens"), 800, "personal_report_max_tokens"
+        )
+
+    def get_personal_report_max_messages(self) -> int:
+        """获取个人报告分析的最大消息数"""
+        return self._get_nested(
+            ("analysis", "personal_report", "max_messages"), 100, "personal_report_max_messages"
+        )
+
+    def get_personal_report_prompt(self) -> str:
+        """获取个人报告分析提示词模板"""
+        return self._get_nested(
+            ("analysis", "personal_report", "prompt"),
+            "",
+            "personal_report_prompt",
+        )
+
     def get_reports_dir(self):
         """获取报告输出目录（固定为插件数据目录）"""
         return get_default_reports_dir()

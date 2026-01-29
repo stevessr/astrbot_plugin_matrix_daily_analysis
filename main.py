@@ -1047,6 +1047,220 @@ class matrixGroupDailyAnalysis(Star):
             logger.error(f"安装 PDF 依赖失败：{e}", exc_info=True)
             yield event.plain_result(f"❌ 安装过程中出现错误：{str(e)}")
 
+    @filter.command("我的群报告")
+    async def my_group_report(
+        self, event: AstrMessageEvent, days: int | None = None
+    ):
+        """
+        获取自己在群聊中的分析报告
+        用法：/我的群报告 [天数]
+        """
+        self._ensure_components()
+        if self.config_manager is None:
+            self._ensure_components()
+        if self.config_manager is None:
+            yield event.plain_result("❌ 配置初始化失败，请重启插件后重试")
+            return
+        platform_name = event.get_platform_name()
+        if platform_name != "matrix":
+            yield event.plain_result("❌ 此功能仅支持 Matrix 群聊/房间")
+            return
+
+        group_id = event.session.session_id
+        if not group_id:
+            yield event.plain_result("❌ 请在群聊中使用此命令")
+            return
+
+        # 获取当前用户的 ID
+        current_user_id = event.get_sender_id()
+        if not current_user_id:
+            yield event.plain_result("❌ 无法获取您的用户 ID")
+            return
+
+        # 更新 bot 实例
+        self.bot_manager.update_from_event(event)
+        if not self.bot_manager.has_bot_instance():
+            await self.bot_manager.auto_discover_bot_instances()
+
+        # 检查群组权限
+        if not self.config_manager.is_group_allowed(group_id):
+            yield event.plain_result("❌ 此群未启用日常分析功能")
+            return
+
+        # 设置分析天数
+        analysis_days = (
+            days if days and 1 <= days <= 7 else self.config_manager.get_analysis_days()
+        )
+
+        yield event.plain_result(f"🔍 开始分析您近{analysis_days}天的群聊活动，请稍候...")
+
+        try:
+            # 获取该群对应的平台 ID 和 bot 实例
+            platform_id = await self.auto_scheduler.get_platform_id_for_group(group_id)
+            if not platform_id and hasattr(event, "get_platform_id"):
+                platform_id = event.get_platform_id()
+            bot_instance = self.bot_manager.get_bot_instance(platform_id)
+
+            if not bot_instance:
+                yield event.plain_result(
+                    f"❌ 未找到群 {group_id} 对应的 bot 实例（平台：{platform_id}）"
+                )
+                return
+
+            # 获取群聊消息
+            all_messages = await self.message_analyzer.message_handler.fetch_group_messages(
+                bot_instance, group_id, analysis_days, platform_id
+            )
+            if not all_messages:
+                yield event.plain_result(
+                    "❌ 未找到足够的群聊记录，请确保群内有足够的消息历史"
+                )
+                return
+
+            # 过滤只保留当前用户的消息
+            user_messages = [
+                msg for msg in all_messages
+                if msg.get("sender", {}).get("user_id") == current_user_id
+            ]
+
+            if not user_messages:
+                yield event.plain_result(
+                    f"❌ 未找到您在近{analysis_days}天内的消息记录"
+                )
+                return
+
+            # 检查消息数量是否足够分析
+            min_threshold = max(5, self.config_manager.get_min_messages_threshold() // 5)
+            if len(user_messages) < min_threshold:
+                yield event.plain_result(
+                    f"❌ 您的消息数量不足（{len(user_messages)}条），至少需要{min_threshold}条消息才能进行有效分析"
+                )
+                return
+
+            yield event.plain_result(
+                f"📊 已获取您的{len(user_messages)}条消息，正在进行智能分析..."
+            )
+
+            # 进行个人分析 - 使用简化的分析流程
+            personal_report = await self._generate_personal_report(
+                user_messages, current_user_id, event.unified_msg_origin
+            )
+
+            if not personal_report:
+                yield event.plain_result("❌ 分析过程中出现错误，请稍后重试")
+                return
+
+            yield event.plain_result(personal_report)
+
+        except Exception as e:
+            logger.error(f"个人群报告生成失败：{e}", exc_info=True)
+            yield event.plain_result(
+                f"❌ 分析失败：{str(e)}。请检查网络连接和 LLM 配置，或联系管理员"
+            )
+
+    async def _generate_personal_report(
+        self, messages: list[dict], user_id: str, unified_msg_origin: str = None
+    ) -> str:
+        """生成个人分析报告"""
+        from datetime import datetime
+
+        from .src.analysis.utils.llm_utils import (
+            call_provider_with_retry,
+            extract_response_text,
+        )
+
+        try:
+            # 基础统计
+            stats = self.message_analyzer.message_handler.calculate_statistics(messages)
+
+            # 获取配置
+            max_messages = self.config_manager.get_personal_report_max_messages()
+            max_tokens = self.config_manager.get_personal_report_max_tokens()
+            custom_prompt = self.config_manager.get_personal_report_prompt()
+
+            # 提取用户消息内容用于 LLM 分析
+            message_texts = []
+            for msg in messages[:max_messages]:
+                for content in msg.get("message", []):
+                    if content.get("type") == "text":
+                        text = content.get("data", {}).get("text", "").strip()
+                        if text:
+                            message_texts.append(text)
+
+            if not message_texts:
+                return self._format_personal_basic_report(stats, user_id)
+
+            # 构建 prompt
+            if custom_prompt:
+                # 使用自定义 prompt，支持 {messages} 占位符
+                prompt = custom_prompt.replace("{messages}", chr(10).join(message_texts[:50]))
+            else:
+                # 使用默认 prompt
+                prompt = f"""分析以下用户在群聊中的发言，生成一份简短的个人画像报告。
+
+用户消息样本：
+{chr(10).join(message_texts[:50])}
+
+请分析：
+1. 用户的说话风格和特点（2-3 句话）
+2. 用户可能的兴趣爱好（根据话题推断）
+3. 给用户一个有趣的群聊称号
+4. 一句话总结
+
+请用简洁有趣的语言输出，不要使用 markdown 格式。"""
+
+            llm_resp = await call_provider_with_retry(
+                self.context,
+                self.config_manager,
+                prompt,
+                max_tokens=max_tokens,
+                temperature=0.7,
+                umo=unified_msg_origin,
+                provider_id_key="personal_report_provider_id",
+            )
+
+            if llm_resp:
+                analysis_text = extract_response_text(llm_resp)
+            else:
+                analysis_text = ""
+
+            # 格式化最终报告
+            report = f"""
+🎯 您的群聊个人报告
+📅 {datetime.now().strftime("%Y年%m月%d日")}
+
+📊 基础统计
+• 消息总数：{stats.message_count}
+• 总字符数：{stats.total_characters}
+• 表情数量：{stats.emoji_count}
+• 最活跃时段：{stats.most_active_period}
+
+🔮 AI 分析
+{analysis_text if analysis_text else "暂无 AI 分析结果"}
+"""
+            return report
+
+        except Exception as e:
+            logger.error(f"生成个人报告失败：{e}", exc_info=True)
+            return None
+
+    def _format_personal_basic_report(self, stats, user_id: str) -> str:
+        """格式化基础个人报告（无 LLM 分析时使用）"""
+        from datetime import datetime
+
+        return f"""
+🎯 您的群聊个人报告
+📅 {datetime.now().strftime("%Y年%m月%d日")}
+
+📊 基础统计
+• 消息总数：{stats.message_count}
+• 总字符数：{stats.total_characters}
+• 表情数量：{stats.emoji_count}
+• 最活跃时段：{stats.most_active_period}
+
+💡 提示：消息内容较少，无法进行深度分析
+"""
+
     @filter.command("分析设置")
     @filter.permission_type(PermissionType.ADMIN)
     async def analysis_settings(self, event: AstrMessageEvent, action: str = "status"):

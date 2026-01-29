@@ -261,8 +261,41 @@
             "description": "对话投票提示词模板",
             "editor_mode": true,
             "editor_language": "markdown",
-            "default": "你是群聊文风模仿器。根据下面的聊天记录，生成一个单选投票：给出一个简短的问题 (question)，以及 {option_count} 条候选发言 (options)。候选发言必须是‘嘎啦给目’风格，语气俏皮、有点碎碎念，但不要冒犯。不要@具体用户，不要包含隐私或敏感信息。每条候选发言 6-20 字。只输出 JSON 数组，且只包含一个对象，格式如下：[{\"question\":\"...\",\"options\":[\"...\",\"...\"]}]。\n\n聊天记录：\n{history_text}",
+            "default": "你是群聊文风模仿器。根据下面的聊天记录，生成一个单选投票：给出一个简短的问题 (question)，以及 {option_count} 条候选发言 (options)。候选发言必须是'嘎啦给目'风格，语气俏皮、有点碎碎念，但不要冒犯。不要@具体用户，不要包含隐私或敏感信息。每条候选发言 6-20 字。只输出 JSON 数组，且只包含一个对象，格式如下：[{\"question\":\"...\",\"options\":[\"...\",\"...\"]}]。\n\n聊天记录：\n{history_text}",
             "hint": "支持 {option_count} 和 {history_text} 两个变量，格式必须是纯文本，JSON 结构也只能在 LLM 返回值中"
+          }
+        }
+      },
+      "personal_report": {
+        "description": "个人群报告配置（/我的群报告 命令）",
+        "type": "object",
+        "items": {
+          "provider_id": {
+            "type": "string",
+            "description": "个人报告专用 Provider ID",
+            "_special": "select_provider",
+            "default": "",
+            "hint": "若希望该命令使用不同的 Provider，请填写。留空则使用主 LLM Provider"
+          },
+          "max_tokens": {
+            "type": "int",
+            "description": "个人报告最大 Token 数",
+            "default": 800,
+            "hint": "控制 LLM 响应长度，个人报告通常较短，建议 500~1000"
+          },
+          "max_messages": {
+            "type": "int",
+            "description": "分析的最大消息数",
+            "default": 100,
+            "hint": "用于 LLM 分析的用户消息数量上限，过多可能导致 token 超限"
+          },
+          "prompt": {
+            "type": "text",
+            "description": "个人报告提示词模板",
+            "editor_mode": true,
+            "editor_language": "markdown",
+            "default": "",
+            "hint": "自定义个人报告的 LLM 提示词。支持 {messages} 变量。留空使用默认提示词"
           }
         }
       }
