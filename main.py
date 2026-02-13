@@ -278,6 +278,38 @@ class matrixGroupDailyAnalysis(Star):
                 yield event.plain_result("❌ 分析过程中出现错误，请稍后重试")
                 return
 
+            # 检查所有分析是否都失败
+            topics = analysis_result.get("topics", [])
+            user_titles = analysis_result.get("user_titles", [])
+            golden_quotes = analysis_result.get("statistics", {}).get(
+                "golden_quotes", []
+            )
+
+            # 检查各个分析功能是否启用
+            topic_enabled = self.config_manager.get_topic_analysis_enabled()
+            user_title_enabled = self.config_manager.get_user_title_analysis_enabled()
+            golden_quote_enabled = (
+                self.config_manager.get_golden_quote_analysis_enabled()
+            )
+
+            # 如果启用的分析全部失败（结果为空），则返回错误
+            enabled_analyses_failed = []
+            if topic_enabled and not topics:
+                enabled_analyses_failed.append("话题分析")
+            if user_title_enabled and not user_titles:
+                enabled_analyses_failed.append("用户称号分析")
+            if golden_quote_enabled and not golden_quotes:
+                enabled_analyses_failed.append("金句分析")
+
+            # 如果所有启用的分析都失败，不输出报告
+            if len(enabled_analyses_failed) == (
+                topic_enabled + user_title_enabled + golden_quote_enabled
+            ):
+                yield event.plain_result(
+                    f"❌ 所有分析均失败：{', '.join(enabled_analyses_failed)}。请检查 LLM 配置和网络连接，或稍后重试"
+                )
+                return
+
             # 生成报告
             output_format = self.config_manager.get_output_format()
             if output_format == "image":
