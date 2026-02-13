@@ -209,7 +209,9 @@ class matrixGroupDailyAnalysis(Star):
 
         # 设置分析天数
         analysis_days = (
-            days if days and 1 <= days <= 7 else self.config_manager.get_analysis_days()
+            days
+            if days and 1 <= days <= 30
+            else self.config_manager.get_analysis_days()
         )
 
         # 发送进度提示
@@ -350,7 +352,9 @@ class matrixGroupDailyAnalysis(Star):
             return
 
         analysis_days = (
-            days if days and 1 <= days <= 7 else self.config_manager.get_analysis_days()
+            days
+            if days and 1 <= days <= 365
+            else self.config_manager.get_analysis_days()
         )
         progress_text = f"🫪 正在根据近{analysis_days}天聊天生成对话选项，请稍候..."
         if self.config_manager.get_use_reaction_for_progress():
