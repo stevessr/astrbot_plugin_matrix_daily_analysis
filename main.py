@@ -36,6 +36,8 @@ from .src.utils.helpers import MessageAnalyzer
     "https://github.com/stevessr/astrbot_plugin_matrix_daily_analysis",
 )
 class matrixGroupDailyAnalysis(Star):
+    MAX_ANALYSIS_DAYS = 31
+
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
         self.config = config
@@ -208,11 +210,9 @@ class matrixGroupDailyAnalysis(Star):
             return
 
         # 设置分析天数
-        analysis_days = (
-            days
-            if days and 1 <= days <= 30
-            else self.config_manager.get_analysis_days()
-        )
+        analysis_days = self.config_manager.get_analysis_days()
+        if days is not None:
+            analysis_days = min(self.MAX_ANALYSIS_DAYS, max(1, days))
 
         # 发送进度提示
         progress_text = f"🔍 开始分析群聊近{analysis_days}天的活动，请稍候..."
@@ -383,11 +383,9 @@ class matrixGroupDailyAnalysis(Star):
             yield event.plain_result("❌ 此群未启用日常分析功能")
             return
 
-        analysis_days = (
-            days
-            if days and 1 <= days <= 365
-            else self.config_manager.get_analysis_days()
-        )
+        analysis_days = self.config_manager.get_analysis_days()
+        if days is not None:
+            analysis_days = min(self.MAX_ANALYSIS_DAYS, max(1, days))
         progress_text = f"🫪 正在根据近{analysis_days}天聊天生成对话选项，请稍候..."
         if self.config_manager.get_use_reaction_for_progress():
             emoji = self.config_manager.get_progress_reaction_emoji() or "🫪"
@@ -662,7 +660,7 @@ class matrixGroupDailyAnalysis(Star):
             yield event.plain_result("❌ 此群未启用日常分析功能")
             return
 
-        analysis_days = max(1, days)
+        analysis_days = min(self.MAX_ANALYSIS_DAYS, max(1, days))
 
         # 发送进度提示
         progress_text = f"🔍 开始分析您近{analysis_days}天的群聊活动，请稍候..."

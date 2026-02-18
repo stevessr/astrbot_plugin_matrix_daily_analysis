@@ -8,6 +8,8 @@ import sys
 from astrbot.api import AstrBotConfig, logger
 from astrbot.core.utils.astrbot_path import get_astrbot_data_path
 
+MAX_ANALYSIS_DAYS = 31
+
 
 def get_default_reports_dir():
     """获取插件报告目录（Path）"""
@@ -106,7 +108,8 @@ class ConfigManager:
 
     def get_analysis_days(self) -> int:
         """获取分析天数"""
-        return self._get_nested(("analysis", "days"), 1, "analysis_days")
+        days = self._get_nested(("analysis", "days"), 1, "analysis_days")
+        return max(1, min(int(days), MAX_ANALYSIS_DAYS))
 
     def get_history_filter_prefixes(self) -> list[str]:
         """获取历史消息过滤前缀（全局）"""
@@ -446,7 +449,8 @@ class ConfigManager:
 
     def set_analysis_days(self, days: int):
         """设置分析天数"""
-        self._set_nested(("analysis", "days"), days)
+        normalized_days = max(1, min(int(days), MAX_ANALYSIS_DAYS))
+        self._set_nested(("analysis", "days"), normalized_days)
 
     def set_auto_analysis_time(self, time_str: str):
         """设置自动分析时间"""

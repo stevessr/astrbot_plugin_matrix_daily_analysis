@@ -52,7 +52,7 @@
         "type": "int",
         "description": "默认分析天数",
         "default": 1,
-        "hint": "默认分析最近几天的消息，建议 1-7 天"
+        "hint": "默认分析最近几天的消息，范围 1-31 天"
       },
       "max_messages": {
         "type": "int",
