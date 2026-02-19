@@ -267,15 +267,21 @@ class BotManager:
         """获取平台实例（用于访问 sender 等平台能力）"""
         if platform_id and platform_id in self._platforms:
             return self._platforms[platform_id]
+        normalized_target_platform_name = str(platform_name or "").strip().lower()
 
         for platform in self._iter_platform_instances():
             try:
                 meta_name, meta_id = self._extract_platform_meta(platform)
+                normalized_meta_name = str(meta_name or "").strip().lower()
                 if platform_id and meta_id == platform_id:
                     self._platforms[platform_id] = platform
                     return platform
-                if not platform_id and platform_name and meta_name == platform_name:
-                    key = meta_id or platform_name
+                if (
+                    not platform_id
+                    and normalized_target_platform_name
+                    and normalized_meta_name == normalized_target_platform_name
+                ):
+                    key = meta_id or normalized_target_platform_name
                     self._platforms[key] = platform
                     return platform
             except Exception:
