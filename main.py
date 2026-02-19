@@ -146,6 +146,11 @@ class matrixGroupDailyAnalysis(Star):
             name="matrix-daily-analysis-delayed-start",
         )
 
+    @staticmethod
+    def _resolve_group_id(event: AstrMessageEvent) -> str | None:
+        group_id = str(event.get_session_id() or "").strip()
+        return group_id or None
+
     async def _delayed_start_scheduler(self):
         """延迟启动调度器，给系统时间初始化"""
         try:
@@ -241,7 +246,7 @@ class matrixGroupDailyAnalysis(Star):
             yield event.plain_result("❌ 此功能仅支持 Matrix 群聊/房间")
             return
 
-        group_id = event.get_session_id()
+        group_id = self._resolve_group_id(event)
         if not group_id:
             yield event.plain_result("❌ 请在群聊中使用此命令")
             return
@@ -415,7 +420,7 @@ class matrixGroupDailyAnalysis(Star):
             yield event.plain_result("❌ 此功能仅支持 Matrix 群聊/房间")
             return
 
-        group_id = event.get_session_id()
+        group_id = self._resolve_group_id(event)
         if not group_id:
             yield event.plain_result("❌ 请在群聊中使用此命令")
             return
@@ -433,9 +438,9 @@ class matrixGroupDailyAnalysis(Star):
         analysis_days = self.config_manager.get_analysis_days()
         if days is not None:
             analysis_days = min(self.MAX_ANALYSIS_DAYS, max(1, days))
-        progress_text = f"🫪 正在根据近{analysis_days}天聊天生成对话选项，请稍候..."
+        progress_text = f"🗳️ 正在根据近{analysis_days}天聊天生成对话选项，请稍候..."
         if self.config_manager.get_use_reaction_for_progress():
-            emoji = self.config_manager.get_progress_reaction_emoji() or "🫪"
+            emoji = self.config_manager.get_progress_reaction_emoji() or "🗳️"
             try:
                 await event.react(emoji)
             except Exception as e:
@@ -562,7 +567,7 @@ class matrixGroupDailyAnalysis(Star):
             yield event.plain_result("❌ 此功能仅支持 Matrix 群聊/房间")
             return
 
-        group_id = event.get_session_id()
+        group_id = self._resolve_group_id(event)
         if not group_id:
             yield event.plain_result("❌ 请在群聊中使用此命令")
             return
@@ -686,7 +691,7 @@ class matrixGroupDailyAnalysis(Star):
             yield event.plain_result("❌ 此功能仅支持 Matrix 群聊/房间")
             return
 
-        group_id = event.get_session_id()
+        group_id = self._resolve_group_id(event)
         if not group_id:
             yield event.plain_result("❌ 请在群聊中使用此命令")
             return
@@ -816,7 +821,7 @@ class matrixGroupDailyAnalysis(Star):
             yield event.plain_result("❌ 此功能仅支持 Matrix 群聊/房间")
             return
 
-        group_id = event.get_session_id()
+        group_id = self._resolve_group_id(event)
         if not group_id:
             yield event.plain_result("❌ 请在群聊中使用此命令")
             return

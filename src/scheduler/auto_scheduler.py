@@ -7,6 +7,7 @@ import asyncio
 import base64
 import weakref
 from datetime import datetime, timedelta
+from pathlib import Path
 
 import aiohttp
 
@@ -59,6 +60,33 @@ class AutoScheduler:
         elif bot_matrix_ids:
             self.bot_manager.set_bot_matrix_ids([bot_matrix_ids])
 
+    @staticmethod
+    def _build_target_time(now: datetime, time_text: str) -> datetime | None:
+        normalized_time = str(time_text or "").strip()
+        try:
+            parsed = datetime.strptime(normalized_time, "%H:%M")
+        except ValueError:
+            return None
+        return parsed.replace(year=now.year, month=now.month, day=now.day)
+
+    def _is_matrix_platform_id(self, platform_id: str) -> bool:
+        normalized_platform_id = str(platform_id or "").strip()
+        if not normalized_platform_id:
+            return False
+        if normalized_platform_id == "matrix":
+            return True
+        get_platform = getattr(self.bot_manager, "get_platform", None)
+        if not callable(get_platform):
+            return False
+        platform = get_platform(platform_id=normalized_platform_id)
+        if platform is None:
+            return False
+        try:
+            meta = platform.meta()
+            return str(getattr(meta, "name", "") or "") == "matrix"
+        except Exception:
+            return False
+
     async def get_platform_id_for_group(self, group_id):
         """根据群 ID 获取对应的平台 ID"""
         try:
@@ -71,9 +99,27 @@ class AutoScheduler:
                     logger.debug("使用 Matrix 平台实例")
                     return "matrix"
 
+                matrix_platform_ids = [
+                    platform_id
+                    for platform_id in self.bot_manager._bot_instances.keys()
+                    if self._is_matrix_platform_id(platform_id)
+                ]
+                if len(matrix_platform_ids) == 1:
+                    selected = matrix_platform_ids[0]
+                    logger.debug(f"使用唯一 Matrix 平台实例：{selected}")
+                    return selected
+                if len(matrix_platform_ids) > 1:
+                    logger.error(
+                        f"❌ 检测到多个 Matrix 平台实例，无法自动选择：{matrix_platform_ids}"
+                    )
+                    return None
+
                 # 如果只有一个实例，直接返回（保底）
                 if len(self.bot_manager._bot_instances) == 1:
                     platform_id = list(self.bot_manager._bot_instances.keys())[0]
+                    if not self._is_matrix_platform_id(platform_id):
+                        logger.error(f"❌ 唯一可用适配器不是 Matrix：{platform_id}")
+                        return None
                     logger.debug(f"只有一个适配器，使用平台：{platform_id}")
                     return platform_id
 
@@ -141,9 +187,14 @@ class AutoScheduler:
         while True:
             try:
                 now = datetime.now()
-                target_time = datetime.strptime(
-                    self.config_manager.get_auto_analysis_time(), "%H:%M"
-                ).replace(year=now.year, month=now.month, day=now.day)
+                auto_time = self.config_manager.get_auto_analysis_time()
+                target_time = self._build_target_time(now, auto_time)
+                if target_time is None:
+                    logger.error(
+                        f"自动分析时间配置无效：{auto_time!r}，期望格式为 HH:MM，将在 5 分钟后重试"
+                    )
+                    await asyncio.sleep(300)
+                    continue
 
                 # 如果今天的目标时间已过，设置为明天
                 if now >= target_time:
@@ -218,7 +269,13 @@ class AutoScheduler:
 
             # 创建并发任务 - 为每个群聊创建独立的分析任务
             # 限制最大并发数
-            max_concurrent = self.config_manager.get_max_concurrent_tasks()
+            try:
+                max_concurrent = max(
+                    1,
+                    int(self.config_manager.get_max_concurrent_tasks()),
+                )
+            except (TypeError, ValueError):
+                max_concurrent = 1
             logger.info(f"自动分析并发数限制：{max_concurrent}")
             sem = asyncio.Semaphore(max_concurrent)
 
@@ -248,8 +305,11 @@ class AutoScheduler:
                 if isinstance(result, Exception):
                     logger.error(f"群 {group_id} 分析任务异常：{result}")
                     error_count += 1
-                else:
+                elif result is True:
                     success_count += 1
+                else:
+                    logger.warning(f"群 {group_id} 分析未成功完成")
+                    error_count += 1
 
             logger.info(
                 f"并发分析完成 - 成功：{success_count}, 失败：{error_count}, 总计：{len(enabled_groups)}"
@@ -258,19 +318,24 @@ class AutoScheduler:
         except Exception as e:
             logger.error(f"自动分析执行失败：{e}", exc_info=True)
 
-    async def _perform_auto_analysis_for_group_with_timeout(self, group_id: str):
+    async def _perform_auto_analysis_for_group_with_timeout(
+        self, group_id: str
+    ) -> bool:
         """为指定群执行自动分析（带超时控制）"""
         try:
             # 为每个群聊设置独立的超时时间（20 分钟）- 使用 asyncio.wait_for 兼容所有 Python 版本
-            await asyncio.wait_for(
+            result = await asyncio.wait_for(
                 self._perform_auto_analysis_for_group(group_id), timeout=1200
             )
+            return bool(result)
         except asyncio.TimeoutError:
             logger.error(f"群 {group_id} 分析超时（20 分钟），跳过该群分析")
+            return False
         except Exception as e:
             logger.error(f"群 {group_id} 分析任务执行失败：{e}")
+            return False
 
-    async def _perform_auto_analysis_for_group(self, group_id: str):
+    async def _perform_auto_analysis_for_group(self, group_id: str) -> bool:
         """为指定群执行自动分析（核心逻辑）"""
         # 为每个群聊使用独立的锁，避免全局锁导致串行化
         group_lock_key = f"analysis_{group_id}"
@@ -295,7 +360,7 @@ class AutoScheduler:
                     logger.warning(
                         f"群 {group_id} 自动分析跳过：bot 管理器未就绪 - {status}"
                     )
-                    return
+                    return False
 
                 logger.info(f"开始为群 {group_id} 执行自动分析（并发任务）")
 
@@ -315,6 +380,8 @@ class AutoScheduler:
                     )
 
                     for test_platform_id, test_bot_instance in available_platforms:
+                        if not self._is_matrix_platform_id(test_platform_id):
+                            continue
                         # 检查该平台是否启用了此插件
                         if not self.bot_manager.is_plugin_enabled(
                             test_platform_id, "astrbot_plugin_matrix_daily_analysis"
@@ -359,7 +426,7 @@ class AutoScheduler:
                         logger.warning(
                             f"群 {group_id} 所有平台都尝试失败，未获取到足够的消息记录"
                         )
-                        return
+                        return False
                 else:
                     # 回退到原来的逻辑（单个平台）
                     logger.warning(f"群 {group_id} 没有多个平台可用，使用回退逻辑")
@@ -367,7 +434,7 @@ class AutoScheduler:
 
                     if not platform_id:
                         logger.error(f"❌ 群 {group_id} 无法获取平台 ID，跳过分析")
-                        return
+                        return False
 
                     bot_instance = self.bot_manager.get_bot_instance(platform_id)
 
@@ -375,7 +442,7 @@ class AutoScheduler:
                         logger.error(
                             f"❌ 群 {group_id} 未找到对应的 bot 实例（平台：{platform_id}）"
                         )
-                        return
+                        return False
 
                     # 获取群聊消息
                     analysis_days = self.config_manager.get_analysis_days()
@@ -385,10 +452,10 @@ class AutoScheduler:
 
                     if messages is None:
                         logger.warning(f"群 {group_id} 获取消息失败，跳过分析")
-                        return
+                        return False
                     elif not messages:
                         logger.warning(f"群 {group_id} 未获取到足够的消息记录")
-                        return
+                        return False
 
                 # 检查消息数量
                 min_threshold = self.config_manager.get_min_messages_threshold()
@@ -396,7 +463,7 @@ class AutoScheduler:
                     logger.warning(
                         f"群 {group_id} 消息数量不足（{len(messages)}条），跳过分析"
                     )
-                    return
+                    return False
 
                 logger.info(f"群 {group_id} 获取到 {len(messages)} 条消息，开始分析")
 
@@ -408,7 +475,7 @@ class AutoScheduler:
                 )
                 if not analysis_result:
                     logger.error(f"群 {group_id} 分析失败")
-                    return
+                    return False
 
                 # 生成并发送报告
                 await self._send_analysis_report(group_id, analysis_result, platform_id)
@@ -417,9 +484,11 @@ class AutoScheduler:
                 end_time = running_loop.time()
                 execution_time = end_time - start_time
                 logger.info(f"群 {group_id} 分析完成，耗时：{execution_time:.2f}秒")
+                return True
 
             except Exception as e:
                 logger.error(f"群 {group_id} 自动分析执行失败：{e}", exc_info=True)
+                return False
 
             finally:
                 # 锁资源由 WeakValueDictionary 自动管理，无需手动清理
@@ -444,13 +513,22 @@ class AutoScheduler:
                 continue
 
             # Only support Matrix
-            if platform_id != "matrix":
+            if not self._is_matrix_platform_id(platform_id):
                 continue
 
             try:
-                client = bot_instance.api if hasattr(bot_instance, "api") else bot_instance
+                client = (
+                    bot_instance.api if hasattr(bot_instance, "api") else bot_instance
+                )
                 if hasattr(client, "get_joined_rooms"):
                     rooms = await client.get_joined_rooms()
+                    if isinstance(rooms, dict):
+                        rooms = rooms.get("joined_rooms", [])
+                    if not isinstance(rooms, (list, tuple, set)):
+                        logger.debug(
+                            f"平台 {platform_id} get_joined_rooms 返回格式无效：{rooms}"
+                        )
+                        continue
                     all_groups.update(rooms)
                     logger.info(f"Matrix 平台获取到 {len(rooms)} 个房间")
             except Exception as e:
@@ -476,7 +554,7 @@ class AutoScheduler:
                     return None
 
                 # Check if it's Matrix
-                if platform_id == "matrix":
+                if self._is_matrix_platform_id(platform_id):
                     try:
                         # Assuming user_id is MXID
                         bot_instance = self.bot_manager.get_bot_instance(platform_id)
@@ -512,7 +590,10 @@ class AutoScheduler:
                             image_url,
                             html_content,
                         ) = await self.report_generator.generate_image_report(
-                            analysis_result, group_id, self.html_render_func, avatar_getter
+                            analysis_result,
+                            group_id,
+                            self.html_render_func,
+                            avatar_getter,
                         )
                         logger.debug(
                             f"[DEBUG][SEND_REPORT] 图片生成结果 "
@@ -597,7 +678,9 @@ class AutoScheduler:
                         )
                 else:
                     # 没有 html_render 函数，回退到文本报告
-                    logger.warning(f"群 {group_id} 缺少 html_render 函数，回退到文本报告")
+                    logger.warning(
+                        f"群 {group_id} 缺少 html_render 函数，回退到文本报告"
+                    )
                     text_report = self.report_generator.generate_text_report(
                         analysis_result
                     )
@@ -659,29 +742,12 @@ class AutoScheduler:
         """发送图片消息到群（仅支持 Matrix，通过 upload 方式）"""
         try:
             prefix_text = "📊 每日群聊分析报告已生成："
-
-            # ===== 获取平台 =====
-            if (
-                hasattr(self.bot_manager, "_bot_instances")
-                and self.bot_manager._bot_instances
-            ):
-                available_platforms = list(self.bot_manager._bot_instances.items())
-                logger.info(
-                    f"群 {group_id} 检测到 {len(available_platforms)} 个可用平台，开始依次尝试发送图片..."
-                )
-            else:
-                logger.warning(f"群 {group_id} 没有多个平台可用，使用回退逻辑")
-                platform_id = await self.get_platform_id_for_group(group_id)
-                if not platform_id:
-                    logger.error(f"❌ 群 {group_id} 无法获取平台 ID，无法发送图片")
-                    return False
-                bot_instance = self.bot_manager.get_bot_instance(platform_id)
-                if not bot_instance:
-                    logger.error(
-                        f"❌ 群 {group_id} 发送图片失败：缺少 bot 实例（平台：{platform_id}）"
-                    )
-                    return False
-                available_platforms = [(platform_id, bot_instance)]
+            clients = await self._resolve_matrix_clients(
+                group_id,
+                action_desc="发送图片",
+            )
+            if not clients:
+                return False
 
             # 仅支持 Matrix，必须下载后上传
             try:
@@ -695,7 +761,7 @@ class AutoScheduler:
                             )
                             image_bytes = None
                         else:
-                            max_bytes = 10 * 1024 * 1024 # 10MB
+                            max_bytes = 10 * 1024 * 1024  # 10MB
                             image_bytes = await resp.read()
                             if len(image_bytes) > max_bytes:
                                 logger.error(f"图片太大：{len(image_bytes)}")
@@ -705,17 +771,8 @@ class AutoScheduler:
                 image_bytes = None
 
             if image_bytes:
-                for test_platform_id, test_bot_instance in available_platforms:
-                    if test_platform_id != "matrix":
-                        continue
-
+                for client in clients:
                     try:
-                        logger.info("尝试使用 Matrix 平台发送图片...")
-                        client = (
-                            test_bot_instance.api
-                            if hasattr(test_bot_instance, "api")
-                            else test_bot_instance
-                        )
                         if hasattr(client, "upload_file") and hasattr(
                             client,
                             "send_message",
@@ -747,7 +804,6 @@ class AutoScheduler:
                                 return True
                     except Exception as e:
                         logger.error(f"Matrix 图片发送失败：{e}")
-                    continue
 
             logger.error(f"❌ 群 {group_id} 图片发送失败，回退到文本")
             await self._send_text_message(
@@ -763,42 +819,24 @@ class AutoScheduler:
     async def _send_text_message(self, group_id: str, text_content: str):
         """发送文本消息到群 - 仅支持 Matrix"""
         try:
-            # 获取所有可用的平台，依次尝试发送
-            if (
-                hasattr(self.bot_manager, "_bot_instances")
-                and self.bot_manager._bot_instances
-            ):
-                available_platforms = list(self.bot_manager._bot_instances.items())
-                logger.info(
-                    f"群 {group_id} 检测到 {len(available_platforms)} 个可用平台，开始依次尝试发送文本..."
-                )
-            else:
-                platform_id = await self.get_platform_id_for_group(group_id)
-                if not platform_id:
-                    logger.error(f"❌ 群 {group_id} 无法获取平台 ID，无法发送文本")
-                    return False
-                bot_instance = self.bot_manager.get_bot_instance(platform_id)
-                available_platforms = [(platform_id, bot_instance)]
+            clients = await self._resolve_matrix_clients(
+                group_id,
+                action_desc="发送文本",
+            )
+            if not clients:
+                return False
 
-            for test_platform_id, test_bot_instance in available_platforms:
-                if test_platform_id != "matrix":
-                    continue
+            for client in clients:
                 try:
-                    client = (
-                        test_bot_instance.api
-                        if hasattr(test_bot_instance, "api")
-                        else test_bot_instance
-                    )
                     await client.send_message(
                         group_id,
                         "m.room.message",
-                        {"msgtype": "m.text", "body": text_content}
+                        {"msgtype": "m.text", "body": text_content},
                     )
                     logger.info("✅ Matrix 文本发送成功")
                     return True
                 except Exception as e:
                     logger.error(f"Matrix 文本发送失败：{e}")
-                    continue
 
             logger.error(f"❌ 群 {group_id} 文本发送失败")
             return False
@@ -810,36 +848,21 @@ class AutoScheduler:
     async def _send_pdf_file(self, group_id: str, pdf_path: str):
         """发送 PDF 文件到群 - 仅支持 Matrix"""
         try:
-            # 获取所有可用的平台，依次尝试发送
-            if (
-                hasattr(self.bot_manager, "_bot_instances")
-                and self.bot_manager._bot_instances
-            ):
-                available_platforms = list(self.bot_manager._bot_instances.items())
-                logger.info(
-                    f"群 {group_id} 检测到 {len(available_platforms)} 个可用平台，开始依次尝试发送 PDF..."
-                )
-            else:
-                platform_id = await self.get_platform_id_for_group(group_id)
-                if not platform_id:
-                    logger.error(f"❌ 群 {group_id} 无法获取平台 ID，无法发送 PDF")
-                    return False
-                bot_instance = self.bot_manager.get_bot_instance(platform_id)
-                available_platforms = [(platform_id, bot_instance)]
+            clients = await self._resolve_matrix_clients(
+                group_id,
+                action_desc="发送 PDF",
+            )
+            if not clients:
+                return False
 
-            for test_platform_id, test_bot_instance in available_platforms:
-                if test_platform_id != "matrix":
-                    continue
+            try:
+                pdf_data = Path(pdf_path).read_bytes()
+            except Exception as e:
+                logger.error(f"读取 PDF 文件失败：{e}")
+                return False
+
+            for client in clients:
                 try:
-                    # Read file content
-                    with open(pdf_path, "rb") as f:
-                        pdf_data = f.read()
-
-                    client = (
-                        test_bot_instance.api
-                        if hasattr(test_bot_instance, "api")
-                        else test_bot_instance
-                    )
                     if hasattr(client, "upload_file") and hasattr(
                         client,
                         "send_message",
@@ -856,7 +879,10 @@ class AutoScheduler:
                             await client.send_message(
                                 group_id,
                                 "m.room.message",
-                                {"msgtype": "m.text", "body": "📊 每日群聊分析报告已生成："},
+                                {
+                                    "msgtype": "m.text",
+                                    "body": "📊 每日群聊分析报告已生成：",
+                                },
                             )
                             # Send File
                             await client.send_message(
@@ -873,7 +899,6 @@ class AutoScheduler:
                             return True
                 except Exception as e:
                     logger.error(f"Matrix PDF 发送失败：{e}")
-                continue
 
             logger.error(f"❌ 群 {group_id} PDF 发送失败")
             return False
@@ -881,3 +906,54 @@ class AutoScheduler:
         except Exception as e:
             logger.error(f"发送 PDF 文件到群 {group_id} 失败：{e}")
             return False
+
+    async def _resolve_matrix_clients(
+        self,
+        group_id: str,
+        *,
+        action_desc: str,
+    ) -> list:
+        if (
+            hasattr(self.bot_manager, "_bot_instances")
+            and self.bot_manager._bot_instances
+        ):
+            available_platforms = list(self.bot_manager._bot_instances.items())
+            logger.info(
+                f"群 {group_id} 检测到 {len(available_platforms)} 个可用平台，开始依次尝试{action_desc}..."
+            )
+        else:
+            platform_id = await self.get_platform_id_for_group(group_id)
+            if not platform_id:
+                logger.error(f"❌ 群 {group_id} 无法获取平台 ID，无法{action_desc}")
+                return []
+            bot_instance = self.bot_manager.get_bot_instance(platform_id)
+            if not bot_instance:
+                logger.error(
+                    f"❌ 群 {group_id} 缺少 bot 实例（平台：{platform_id}），无法{action_desc}"
+                )
+                return []
+            available_platforms = [(platform_id, bot_instance)]
+
+        clients = []
+        seen_client_ids: set[int] = set()
+        for platform_id, bot_instance in available_platforms:
+            if not self._is_matrix_platform_id(platform_id) or bot_instance is None:
+                continue
+            if hasattr(
+                self.bot_manager, "is_plugin_enabled"
+            ) and not self.bot_manager.is_plugin_enabled(
+                platform_id,
+                "astrbot_plugin_matrix_daily_analysis",
+            ):
+                continue
+            client = bot_instance.api if hasattr(bot_instance, "api") else bot_instance
+            if client is None:
+                continue
+            client_id = id(client)
+            if client_id in seen_client_ids:
+                continue
+            seen_client_ids.add(client_id)
+            clients.append(client)
+        if not clients:
+            logger.error(f"❌ 群 {group_id} 无可用 Matrix 客户端，无法{action_desc}")
+        return clients

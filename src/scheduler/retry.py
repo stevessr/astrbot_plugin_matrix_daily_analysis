@@ -45,25 +45,86 @@ class RetryManager:
         self._requeue_tasks: set[asyncio.Task] = set()
         self._dlq = []  # 死信队列 (Failures)
 
+    def _handle_worker_task_done(self, task: asyncio.Task) -> None:
+        if self.worker_task is task:
+            self.worker_task = None
+        try:
+            task.result()
+        except asyncio.CancelledError:
+            logger.debug("[RetryManager] Worker 任务已取消")
+        except Exception as e:
+            logger.error(f"[RetryManager] Worker 任务异常退出：{e}", exc_info=True)
+            self.running = False
+
+    def _handle_requeue_task_done(self, task: asyncio.Task) -> None:
+        self._requeue_tasks.discard(task)
+        try:
+            task.result()
+        except asyncio.CancelledError:
+            pass
+        except Exception as e:
+            logger.error(f"[RetryManager] 延迟重试任务异常退出：{e}", exc_info=True)
+
+    def _is_matrix_platform_id(self, platform_id: str) -> bool:
+        normalized = str(platform_id or "").strip()
+        if not normalized:
+            return False
+        if normalized == "matrix":
+            return True
+        get_platform = getattr(self.bot_manager, "get_platform", None)
+        if not callable(get_platform):
+            return False
+        platform = get_platform(platform_id=normalized)
+        if platform is None:
+            return False
+        try:
+            meta = platform.meta()
+            return str(getattr(meta, "name", "") or "") == "matrix"
+        except Exception:
+            return False
+
+    def _resolve_retry_bot_instance(
+        self, platform_id: str
+    ) -> tuple[str | None, object | None]:
+        normalized = str(platform_id or "").strip()
+        if normalized:
+            bot = self.bot_manager.get_bot_instance(normalized)
+            if bot and self._is_matrix_platform_id(normalized):
+                return normalized, bot
+
+        bot_instances = getattr(self.bot_manager, "_bot_instances", {})
+        if isinstance(bot_instances, dict):
+            for fallback_platform_id, bot in bot_instances.items():
+                if bot and self._is_matrix_platform_id(fallback_platform_id):
+                    return str(fallback_platform_id), bot
+        return None, None
+
     async def start(self):
         """启动重试工作进程"""
         if self.running:
             return
         self.running = True
-        self.worker_task = asyncio.create_task(self._worker())
+        self.worker_task = asyncio.create_task(
+            self._worker(),
+            name="matrix-daily-analysis-retry-worker",
+        )
+        self.worker_task.add_done_callback(self._handle_worker_task_done)
         logger.info("[RetryManager] 图片重试管理器已启动")
 
     async def stop(self):
         """停止重试工作进程"""
         self.running = False
-        if self.worker_task:
+        if self.worker_task and not self.worker_task.done():
             self.worker_task.cancel()
             try:
                 await self.worker_task
             except asyncio.CancelledError:
                 pass
+        self.worker_task = None
 
-        pending_requeue_tasks = [task for task in self._requeue_tasks if not task.done()]
+        pending_requeue_tasks = [
+            task for task in self._requeue_tasks if not task.done()
+        ]
         for task in pending_requeue_tasks:
             task.cancel()
         if pending_requeue_tasks:
@@ -102,8 +163,9 @@ class RetryManager:
     async def _worker(self):
         """工作进程循环"""
         while self.running:
+            task: RetryTask | None = None
             try:
-                task: RetryTask = await self.queue.get()
+                task = await self.queue.get()
 
                 # 延迟策略：指数回退 (5s, 10s, 20s...) + 随机波动 (1~5s)
                 jitter = random.uniform(1, 5)
@@ -117,7 +179,6 @@ class RetryManager:
 
                 if success:
                     logger.info(f"[RetryManager] 群 {task.group_id} 重试成功")
-                    self.queue.task_done()
                 else:
                     task.retry_count += 1
                     if task.retry_count < task.max_retries:
@@ -125,13 +186,11 @@ class RetryManager:
                             f"[RetryManager] 群 {task.group_id} 重试失败，{delay}秒后再次尝试"
                         )
                         self._schedule_requeue_after_delay(task, delay)
-                        self.queue.task_done()
                     else:
                         logger.error(
                             f"[RetryManager] 群 {task.group_id} 超过最大重试次数，移入死信队列并尝试文本回退"
                         )
                         self._dlq.append(task)
-                        self.queue.task_done()
                         # 尝试发送文本回退
                         await self._send_fallback_text(task)
                         await self._notify_failure(task)
@@ -141,6 +200,9 @@ class RetryManager:
             except Exception as e:
                 logger.error(f"[RetryManager] Worker 异常：{e}", exc_info=True)
                 await asyncio.sleep(1)
+            finally:
+                if task is not None:
+                    self.queue.task_done()
 
     def _schedule_requeue_after_delay(self, task: RetryTask, delay: float) -> None:
         if not self.running:
@@ -150,7 +212,7 @@ class RetryManager:
             name=f"retry-requeue-{task.group_id}",
         )
         self._requeue_tasks.add(requeue_task)
-        requeue_task.add_done_callback(self._requeue_tasks.discard)
+        requeue_task.add_done_callback(self._handle_requeue_task_done)
 
     async def _requeue_after_delay(self, task: RetryTask, delay: float):
         try:
@@ -188,19 +250,22 @@ class RetryManager:
                 )
                 return False
 
-            # 2. 获取 Bot 实例
-            bot = self.bot_manager.get_bot_instance(task.platform_id)
+            # 2. 获取 Bot 实例（优先使用任务记录的平台，不可用时回退到可用 Matrix 平台）
+            resolved_platform_id, bot = self._resolve_retry_bot_instance(
+                task.platform_id
+            )
             if not bot:
                 logger.error(
                     f"[RetryManager] 平台 {task.platform_id} 的 Bot 实例未找到，无法重试"
                 )
                 return False  # 无法重试，因为 Bot 已离线
 
-            if task.platform_id != "matrix":
-                logger.warning(
-                    f"[RetryManager] 平台 {task.platform_id} 非 Matrix，跳过重试"
+            if resolved_platform_id and resolved_platform_id != task.platform_id:
+                logger.info(
+                    "[RetryManager] 重试任务平台已重定向："
+                    f"{task.platform_id} -> {resolved_platform_id}"
                 )
-                return False
+                task.platform_id = resolved_platform_id
 
             # 3. 发送图片（Matrix 上传 + 发送）
             logger.info(
