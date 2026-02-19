@@ -66,13 +66,12 @@ class DialoguePollHandler:
         for msg in messages:
             if not isinstance(msg, dict):
                 continue
-            sender = (
-                msg.get("sender", {}).get("nickname")
-                or msg.get("sender", {}).get("user_id")
-                or "匿名"
-            )
+            sender_data = msg.get("sender", {})
+            if not isinstance(sender_data, dict):
+                sender_data = {}
+            sender = sender_data.get("nickname") or sender_data.get("user_id") or "匿名"
             msg_time = msg.get("time", 0) or 0
-            sender_id = str(msg.get("sender", {}).get("user_id") or "").strip()
+            sender_id = str(sender_data.get("user_id") or "").strip()
             message_items = msg.get("message", [])
             if not isinstance(message_items, list):
                 continue
@@ -81,7 +80,10 @@ class DialoguePollHandler:
                     continue
                 if content.get("type") != "text":
                     continue
-                text = content.get("data", {}).get("text", "").strip()
+                content_data = content.get("data", {})
+                if not isinstance(content_data, dict):
+                    content_data = {}
+                text = str(content_data.get("text", "") or "").strip()
                 if not text:
                     continue
                 if self._should_skip_history_message(

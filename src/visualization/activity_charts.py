@@ -25,6 +25,8 @@ class ActivityVisualizer:
 
         # 分析消息数据
         for msg in messages:
+            if not isinstance(msg, dict):
+                continue
             # 时间分析 - 只关注小时
             hour = get_hour_from_timestamp(msg.get("time", 0))
 
@@ -49,10 +51,12 @@ class ActivityVisualizer:
             for content in message_items:
                 if not isinstance(content, dict):
                     continue
+                data = content.get("data", {})
+                if not isinstance(data, dict):
+                    data = {}
                 if content.get("type") in ["face", "mface", "bface", "sface"]:
                     emoji_activity[hour] += 1
                 elif content.get("type") == "image":
-                    data = content.get("data", {})
                     summary = data.get("summary", "")
                     if "动画表情" in summary or "表情" in summary:
                         emoji_activity[hour] += 1

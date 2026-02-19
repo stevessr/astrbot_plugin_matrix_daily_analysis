@@ -35,6 +35,8 @@ class UserAnalyzer:
             if not isinstance(msg, dict):
                 continue
             sender = msg.get("sender", {})
+            if not isinstance(sender, dict):
+                continue
             user_id = str(sender.get("user_id", ""))
 
             # 跳过机器人自己的消息，避免进入统计
@@ -57,8 +59,11 @@ class UserAnalyzer:
             for content in message_items:
                 if not isinstance(content, dict):
                     continue
+                data = content.get("data", {})
+                if not isinstance(data, dict):
+                    data = {}
                 if content.get("type") == "text":
-                    text = content.get("data", {}).get("text", "")
+                    text = data.get("text", "")
                     user_stats[user_id]["char_count"] += len(text)
                 elif content.get("type") == "face":
                     # matrix 基础表情
@@ -74,7 +79,6 @@ class UserAnalyzer:
                     user_stats[user_id]["emoji_count"] += 1
                 elif content.get("type") == "image":
                     # 检查是否是动画表情（通过 summary 字段判断）
-                    data = content.get("data", {})
                     summary = data.get("summary", "")
                     if "动画表情" in summary or "表情" in summary:
                         # 动画表情（以 image 形式发送）

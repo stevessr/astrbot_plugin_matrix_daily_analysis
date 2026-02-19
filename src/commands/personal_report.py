@@ -36,6 +36,8 @@ class PersonalReportHandler:
             # 提取用户消息内容用于 LLM 分析
             message_texts = []
             for msg in messages[:max_messages]:
+                if not isinstance(msg, dict):
+                    continue
                 message_items = msg.get("message", [])
                 if not isinstance(message_items, list):
                     continue
@@ -43,7 +45,10 @@ class PersonalReportHandler:
                     if not isinstance(content, dict):
                         continue
                     if content.get("type") == "text":
-                        text = content.get("data", {}).get("text", "").strip()
+                        data = content.get("data", {})
+                        if not isinstance(data, dict):
+                            data = {}
+                        text = str(data.get("text", "") or "").strip()
                         if text:
                             message_texts.append(text)
 
@@ -53,7 +58,9 @@ class PersonalReportHandler:
             # 构建 prompt
             if custom_prompt:
                 # 使用自定义 prompt，支持 {messages} 占位符
-                prompt = custom_prompt.replace("{messages}", chr(10).join(message_texts[:50]))
+                prompt = custom_prompt.replace(
+                    "{messages}", chr(10).join(message_texts[:50])
+                )
             else:
                 # 使用默认 prompt
                 prompt = f"""分析以下用户在群聊中的发言，生成一份简短的个人画像报告。

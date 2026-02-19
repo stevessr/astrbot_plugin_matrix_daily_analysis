@@ -242,7 +242,10 @@ class MessageHandler:
         for msg in messages:
             if not isinstance(msg, dict):
                 continue
-            sender_id = str(msg.get("sender", {}).get("user_id", ""))
+            sender = msg.get("sender", {})
+            if not isinstance(sender, dict):
+                continue
+            sender_id = str(sender.get("user_id", ""))
             participants.add(sender_id)
 
             # 统计时间分布
@@ -256,40 +259,42 @@ class MessageHandler:
             for content in message_items:
                 if not isinstance(content, dict):
                     continue
+                data = content.get("data", {})
+                if not isinstance(data, dict):
+                    data = {}
                 if content.get("type") == "text":
-                    text = content.get("data", {}).get("text", "")
+                    text = data.get("text", "")
                     total_chars += len(text)
                 elif content.get("type") == "face":
                     # matrix 基础表情
                     emoji_statistics.face_count += 1
-                    face_id = content.get("data", {}).get("id", "unknown")
+                    face_id = data.get("id", "unknown")
                     emoji_statistics.face_details[f"face_{face_id}"] = (
                         emoji_statistics.face_details.get(f"face_{face_id}", 0) + 1
                     )
                 elif content.get("type") == "mface":
                     # 动画表情/魔法表情
                     emoji_statistics.mface_count += 1
-                    emoji_id = content.get("data", {}).get("emoji_id", "unknown")
+                    emoji_id = data.get("emoji_id", "unknown")
                     emoji_statistics.face_details[f"mface_{emoji_id}"] = (
                         emoji_statistics.face_details.get(f"mface_{emoji_id}", 0) + 1
                     )
                 elif content.get("type") == "bface":
                     # 超级表情
                     emoji_statistics.bface_count += 1
-                    emoji_id = content.get("data", {}).get("p", "unknown")
+                    emoji_id = data.get("p", "unknown")
                     emoji_statistics.face_details[f"bface_{emoji_id}"] = (
                         emoji_statistics.face_details.get(f"bface_{emoji_id}", 0) + 1
                     )
                 elif content.get("type") == "sface":
                     # 小表情
                     emoji_statistics.sface_count += 1
-                    emoji_id = content.get("data", {}).get("id", "unknown")
+                    emoji_id = data.get("id", "unknown")
                     emoji_statistics.face_details[f"sface_{emoji_id}"] = (
                         emoji_statistics.face_details.get(f"sface_{emoji_id}", 0) + 1
                     )
                 elif content.get("type") == "image":
                     # 检查是否是动画表情（通过 summary 字段判断）
-                    data = content.get("data", {})
                     summary = data.get("summary", "")
                     if "动画表情" in summary or "表情" in summary:
                         # 动画表情（以 image 形式发送）
@@ -306,7 +311,7 @@ class MessageHandler:
                         pass
                 elif (
                     content.get("type") in ["record", "video"]
-                    and "emoji" in str(content.get("data", {})).lower()
+                    and "emoji" in str(data).lower()
                 ):
                     # 其他可能的表情类型
                     emoji_statistics.other_emoji_count += 1
