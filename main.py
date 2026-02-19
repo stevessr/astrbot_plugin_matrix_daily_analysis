@@ -161,7 +161,10 @@ class matrixGroupDailyAnalysis(Star):
                     )
 
                 # 启动调度器
-                await self.auto_scheduler.start_scheduler()
+                if self.config_manager.get_enable_auto_analysis():
+                    await self.auto_scheduler.start_scheduler()
+                else:
+                    logger.info("自动分析已禁用，跳过延迟启动调度器")
             else:
                 logger.warning("Bot 管理器初始化失败，未发现任何适配器")
                 status = self.bot_manager.get_status_info()
