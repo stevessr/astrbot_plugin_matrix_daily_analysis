@@ -286,7 +286,8 @@ class AutoScheduler:
 
         async with lock:
             try:
-                start_time = asyncio.get_event_loop().time()
+                running_loop = asyncio.get_running_loop()
+                start_time = running_loop.time()
 
                 # 检查 bot 管理器状态
                 if not self.bot_manager.is_ready_for_auto_analysis():
@@ -413,7 +414,7 @@ class AutoScheduler:
                 await self._send_analysis_report(group_id, analysis_result, platform_id)
 
                 # 记录执行时间
-                end_time = asyncio.get_event_loop().time()
+                end_time = running_loop.time()
                 execution_time = end_time - start_time
                 logger.info(f"群 {group_id} 分析完成，耗时：{execution_time:.2f}秒")
 
@@ -460,7 +461,7 @@ class AutoScheduler:
     async def _send_analysis_report(
         self, group_id: str, analysis_result: dict, platform_id: str | None = None
     ):
-        logger.info(
+        logger.debug(
             f"[DEBUG][SEND_REPORT] enter "
             f"group_id={group_id}, "
             f"platform_id={platform_id}, "
@@ -715,30 +716,37 @@ class AutoScheduler:
                             if hasattr(test_bot_instance, "api")
                             else test_bot_instance
                         )
-                        if hasattr(client, "upload_file") and hasattr(client, "send_message"):
-                            upload_resp = await client.upload_file(image_bytes, "image/png", "report.png")
+                        if hasattr(client, "upload_file") and hasattr(
+                            client,
+                            "send_message",
+                        ):
+                            upload_resp = await client.upload_file(
+                                image_bytes,
+                                "image/png",
+                                "report.png",
+                            )
                             content_uri = upload_resp.get("content_uri")
                             if content_uri:
-                                    # Send Text First
-                                    await client.send_message(
+                                # Send Text First
+                                await client.send_message(
                                     group_id,
                                     "m.room.message",
-                                    {"msgtype": "m.text", "body": prefix_text}
-                                    )
-                                    # Send Image
-                                    await client.send_message(
+                                    {"msgtype": "m.text", "body": prefix_text},
+                                )
+                                # Send Image
+                                await client.send_message(
                                     group_id,
                                     "m.room.message",
                                     {
                                         "msgtype": "m.image",
                                         "body": "Daily Report.png",
-                                        "url": content_uri
-                                    }
-                                    )
-                                    logger.info("✅ Matrix 图片发送成功")
-                                    return True
+                                        "url": content_uri,
+                                    },
+                                )
+                                logger.info("✅ Matrix 图片发送成功")
+                                return True
                     except Exception as e:
-                            logger.error(f"Matrix 图片发送失败：{e}")
+                        logger.error(f"Matrix 图片发送失败：{e}")
                     continue
 
             logger.error(f"❌ 群 {group_id} 图片发送失败，回退到文本")
@@ -832,32 +840,39 @@ class AutoScheduler:
                         if hasattr(test_bot_instance, "api")
                         else test_bot_instance
                     )
-                    if hasattr(client, "upload_file") and hasattr(client, "send_message"):
+                    if hasattr(client, "upload_file") and hasattr(
+                        client,
+                        "send_message",
+                    ):
                         # Upload
-                        upload_resp = await client.upload_file(pdf_data, "application/pdf", "report.pdf")
+                        upload_resp = await client.upload_file(
+                            pdf_data,
+                            "application/pdf",
+                            "report.pdf",
+                        )
                         content_uri = upload_resp.get("content_uri")
                         if content_uri:
-                                # Send Text First
-                                await client.send_message(
+                            # Send Text First
+                            await client.send_message(
                                 group_id,
                                 "m.room.message",
-                                {"msgtype": "m.text", "body": "📊 每日群聊分析报告已生成："}
-                                )
-                                # Send File
-                                await client.send_message(
+                                {"msgtype": "m.text", "body": "📊 每日群聊分析报告已生成："},
+                            )
+                            # Send File
+                            await client.send_message(
                                 group_id,
                                 "m.room.message",
                                 {
                                     "msgtype": "m.file",
                                     "body": "Daily Report.pdf",
                                     "url": content_uri,
-                                    "info": {"mimetype": "application/pdf"}
-                                }
-                                )
-                                logger.info("✅ Matrix PDF 发送成功")
-                                return True
+                                    "info": {"mimetype": "application/pdf"},
+                                },
+                            )
+                            logger.info("✅ Matrix PDF 发送成功")
+                            return True
                 except Exception as e:
-                        logger.error(f"Matrix PDF 发送失败：{e}")
+                    logger.error(f"Matrix PDF 发送失败：{e}")
                 continue
 
             logger.error(f"❌ 群 {group_id} PDF 发送失败")

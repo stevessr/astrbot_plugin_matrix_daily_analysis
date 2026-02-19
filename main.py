@@ -130,6 +130,8 @@ class matrixGroupDailyAnalysis(Star):
         if (
             self.config_manager
             and self.config_manager.get_enable_auto_analysis()
+            and self.auto_scheduler is not None
+            and self.auto_scheduler.scheduler_task is None
             and (self._delayed_start_task is None or self._delayed_start_task.done())
         ):
             self._ensure_delayed_start_scheduler_task()
@@ -201,6 +203,13 @@ class matrixGroupDailyAnalysis(Star):
             if self.retry_manager:
                 await self.retry_manager.stop()
 
+            try:
+                from .src.utils.pdf_utils import PDFInstaller
+
+                await PDFInstaller.cancel_background_install()
+            except Exception as e:
+                logger.debug(f"停止 PDF 安装后台任务失败：{e}")
+
             # 重置实例属性
             self.auto_scheduler = None
             self.bot_manager = None
@@ -271,7 +280,7 @@ class matrixGroupDailyAnalysis(Star):
             # 获取该群对应的平台 ID 和 bot 实例
             platform_id = await self.auto_scheduler.get_platform_id_for_group(group_id)
             if not platform_id and hasattr(event, "get_platform_id"):
-                platform_id = event.get_platform_id()
+                platform_id = str(event.get_platform_id() or "") or None
             bot_instance = self.bot_manager.get_bot_instance(platform_id)
 
             if not bot_instance:
@@ -438,7 +447,7 @@ class matrixGroupDailyAnalysis(Star):
         try:
             platform_id = await self.auto_scheduler.get_platform_id_for_group(group_id)
             if not platform_id and hasattr(event, "get_platform_id"):
-                platform_id = event.get_platform_id()
+                platform_id = str(event.get_platform_id() or "") or None
             bot_instance = self.bot_manager.get_bot_instance(platform_id)
             if not bot_instance:
                 yield event.plain_result(
@@ -716,7 +725,7 @@ class matrixGroupDailyAnalysis(Star):
             # 获取该群对应的平台 ID 和 bot 实例
             platform_id = await self.auto_scheduler.get_platform_id_for_group(group_id)
             if not platform_id and hasattr(event, "get_platform_id"):
-                platform_id = event.get_platform_id()
+                platform_id = str(event.get_platform_id() or "") or None
             bot_instance = self.bot_manager.get_bot_instance(platform_id)
 
             if not bot_instance:

@@ -23,6 +23,18 @@ class PDFInstaller:
         "failed": False,
         "error_message": None,
     }
+    _install_task: asyncio.Task | None = None
+
+    @staticmethod
+    def _handle_install_task_done(task: asyncio.Task) -> None:
+        if PDFInstaller._install_task is task:
+            PDFInstaller._install_task = None
+        try:
+            task.result()
+        except asyncio.CancelledError:
+            logger.debug("Playwright 安装后台任务已取消")
+        except Exception as e:
+            logger.error(f"Playwright 安装后台任务异常退出：{e}")
 
     @staticmethod
     async def install_playwright(config_manager):
@@ -82,7 +94,9 @@ class PDFInstaller:
             PDFInstaller._install_status["error_message"] = None
 
             logger.info("启动后台任务安装 Chromium...")
-            asyncio.create_task(PDFInstaller._background_playwright_install())
+            install_task = asyncio.create_task(PDFInstaller._background_playwright_install())
+            PDFInstaller._install_task = install_task
+            install_task.add_done_callback(PDFInstaller._handle_install_task_done)
 
             return """🚀 浏览器内核安装任务已启动
 
@@ -96,6 +110,20 @@ class PDFInstaller:
             PDFInstaller._install_status["in_progress"] = False
             logger.error(f"启动安装任务失败：{e}")
             return f"❌ 启动安装任务失败：{e}"
+
+    @staticmethod
+    async def cancel_background_install() -> None:
+        install_task = PDFInstaller._install_task
+        if install_task and not install_task.done():
+            install_task.cancel()
+            try:
+                await install_task
+            except asyncio.CancelledError:
+                pass
+            except Exception as e:
+                logger.debug(f"取消 Playwright 安装任务失败：{e}")
+        PDFInstaller._install_task = None
+        PDFInstaller._install_status["in_progress"] = False
 
     @staticmethod
     async def _background_playwright_install():

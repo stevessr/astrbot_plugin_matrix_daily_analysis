@@ -15,6 +15,8 @@ from ...src.visualization.activity_charts import ActivityVisualizer
 class MessageHandler:
     """消息处理器"""
 
+    _MAX_ANALYSIS_DAYS = 31
+
     def __init__(self, config_manager, bot_manager=None):
         self.config_manager = config_manager
         self.activity_visualizer = ActivityVisualizer()
@@ -65,17 +67,29 @@ class MessageHandler:
                     # 将单个 matrix 号转换为列表，保持统一处理
                     self.bot_manager.set_bot_matrix_ids([bot_matrix_id])
 
+            try:
+                normalized_days = int(days)
+            except (TypeError, ValueError):
+                normalized_days = 1
+            normalized_days = max(1, min(normalized_days, self._MAX_ANALYSIS_DAYS))
+
             # 计算时间范围
             end_time = datetime.now()
-            start_time = end_time - timedelta(days=days)
+            start_time = end_time - timedelta(days=normalized_days)
 
-            logger.info(f"开始获取群 {group_id} 近 {days} 天的消息记录")
+            logger.info(f"开始获取群 {group_id} 近 {normalized_days} 天的消息记录")
             logger.info(
                 f"时间范围：{start_time.strftime('%Y-%m-%d %H:%M:%S')} 到 {end_time.strftime('%Y-%m-%d %H:%M:%S')}"
             )
 
             # 仅支持 Matrix 平台
-            return await self._fetch_matrix_messages(bot_instance, group_id, days, start_time, end_time)
+            return await self._fetch_matrix_messages(
+                bot_instance,
+                group_id,
+                normalized_days,
+                start_time,
+                end_time,
+            )
 
         except Exception as e:
             logger.error(f"群 {group_id} 获取群聊消息记录失败：{e}", exc_info=True)

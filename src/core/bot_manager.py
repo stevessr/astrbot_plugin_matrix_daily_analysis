@@ -24,6 +24,42 @@ class BotManager:
         """设置 AstrBot 上下文"""
         self._context = context
 
+    def _iter_platform_instances(self) -> list:
+        if not self._context or not hasattr(self._context, "platform_manager"):
+            return []
+        platform_manager = self._context.platform_manager
+        get_insts = getattr(platform_manager, "get_insts", None)
+        if callable(get_insts):
+            try:
+                return list(get_insts())
+            except Exception as e:
+                logger.debug(f"获取平台实例失败(get_insts)：{e}")
+        platforms = getattr(platform_manager, "platform_insts", [])
+        if isinstance(platforms, list):
+            return platforms
+        try:
+            return list(platforms)
+        except Exception:
+            return []
+
+    @staticmethod
+    def _extract_platform_meta(platform) -> tuple[str, str]:
+        platform_name = ""
+        platform_id = ""
+        try:
+            meta = platform.meta()
+            platform_name = str(getattr(meta, "name", "") or "")
+            platform_id = str(getattr(meta, "id", "") or "")
+            return platform_name, platform_id
+        except Exception:
+            pass
+
+        metadata = getattr(platform, "metadata", None)
+        if metadata is not None:
+            platform_name = str(getattr(metadata, "name", "") or "")
+            platform_id = str(getattr(metadata, "id", "") or "")
+        return platform_name, platform_id
+
     def set_bot_instance(self, bot_instance, platform_id=None):
         """设置 bot 实例，支持指定平台 ID"""
         if not platform_id:
@@ -45,6 +81,15 @@ class BotManager:
         elif bot_matrix_ids:
             self._bot_matrix_id = str(bot_matrix_ids)
             self._bot_matrix_ids = [str(bot_matrix_ids)]
+
+    def _add_bot_matrix_id(self, bot_matrix_id: str | None) -> None:
+        if not bot_matrix_id:
+            return
+        normalized = str(bot_matrix_id)
+        if normalized not in self._bot_matrix_ids:
+            self._bot_matrix_ids.append(normalized)
+        if self._bot_matrix_ids:
+            self._bot_matrix_id = self._bot_matrix_ids[0]
 
     def get_bot_instance(self, platform_id=None):
         """获取指定平台的 bot 实例，如果不指定则返回第一个可用的实例"""
@@ -89,12 +134,11 @@ class BotManager:
 
     async def auto_discover_bot_instances(self):
         """自动发现所有可用的 bot 实例"""
-        if not self._context or not hasattr(self._context, "platform_manager"):
-            return {}
-
-        # 使用新版 API 获取所有平台实例
-        platforms = self._context.platform_manager.get_insts()
+        platforms = self._iter_platform_instances()
         discovered = {}
+        discovered_platforms = {}
+        if not platforms:
+            return discovered
 
         for platform in platforms:
             # 获取 bot 实例
@@ -104,15 +148,22 @@ class BotManager:
             elif hasattr(platform, "bot"):
                 bot_client = platform.bot
 
-            if (
-                bot_client
-                and hasattr(platform, "metadata")
-                and hasattr(platform.metadata, "id")
-            ):
-                platform_id = platform.metadata.id
-                self.set_bot_instance(bot_client, platform_id)
-                self._platforms[platform_id] = platform
-                discovered[platform_id] = bot_client
+            if not bot_client:
+                continue
+
+            platform_name, platform_id = self._extract_platform_meta(platform)
+            # matrix_daily_analysis 仅支持 Matrix
+            if platform_name and platform_name != "matrix":
+                continue
+
+            normalized_platform_id = str(platform_id or "matrix")
+            self.set_bot_instance(bot_client, normalized_platform_id)
+            discovered_platforms[normalized_platform_id] = platform
+            discovered[normalized_platform_id] = bot_client
+
+        if discovered:
+            self._bot_instances = discovered
+            self._platforms = discovered_platforms
 
         return discovered
 
@@ -154,17 +205,18 @@ class BotManager:
         if hasattr(event, "bot") and event.bot:
             # 从事件中获取平台 ID
             platform_id = None
-            if hasattr(event, "platform") and isinstance(event.platform, str):
-                platform_id = event.platform
+            if hasattr(event, "get_platform_id"):
+                platform_id = str(event.get_platform_id() or "") or None
+            elif hasattr(event, "platform") and isinstance(event.platform, str):
+                platform_id = str(event.platform or "") or None
             elif hasattr(event, "metadata") and hasattr(event.metadata, "id"):
-                platform_id = event.metadata.id
+                platform_id = str(event.metadata.id or "") or None
 
             self.set_bot_instance(event.bot, platform_id)
             # 每次都尝试从 bot 实例提取用户 ID
             bot_id = self._extract_bot_matrix_id(event.bot)
             if bot_id:
-                # 将单个 ID 转换为列表，保持统一处理
-                self.set_bot_matrix_ids([bot_id])
+                self._add_bot_matrix_id(bot_id)
             else:
                 # 如果 bot 实例没有 ID，尝试使用配置的 ID 列表
                 config_ids = self.config_manager.get_bot_matrix_ids()
@@ -174,11 +226,11 @@ class BotManager:
         if hasattr(event, "client") and event.client:
             platform_id = None
             if hasattr(event, "get_platform_id"):
-                platform_id = event.get_platform_id()
+                platform_id = str(event.get_platform_id() or "") or None
             self.set_bot_instance(event.client, platform_id or "matrix")
             bot_id = self._extract_bot_matrix_id(event.client)
             if bot_id:
-                self.set_bot_matrix_ids([bot_id])
+                self._add_bot_matrix_id(bot_id)
             else:
                 config_ids = self.config_manager.get_bot_matrix_ids()
                 if config_ids:
@@ -213,17 +265,14 @@ class BotManager:
         if platform_id and platform_id in self._platforms:
             return self._platforms[platform_id]
 
-        if not self._context or not hasattr(self._context, "platform_manager"):
-            return None
-
-        for platform in self._context.platform_manager.get_insts():
+        for platform in self._iter_platform_instances():
             try:
-                meta = platform.meta()
-                if platform_id and meta and meta.id == platform_id:
+                meta_name, meta_id = self._extract_platform_meta(platform)
+                if platform_id and meta_id == platform_id:
                     self._platforms[platform_id] = platform
                     return platform
-                if not platform_id and platform_name and meta and meta.name == platform_name:
-                    key = meta.id or platform_name
+                if not platform_id and platform_name and meta_name == platform_name:
+                    key = meta_id or platform_name
                     self._platforms[key] = platform
                     return platform
             except Exception:
@@ -243,9 +292,12 @@ class BotManager:
             return True
 
         plugin_set = platform.config.get("plugin_set", ["*"])
-
         if plugin_set is None:
             return False  # 如果明确为 None, 视为都不启用？或者默认？Default is ["*"] usually.
+        if isinstance(plugin_set, str):
+            plugin_set = [plugin_set]
+        if not isinstance(plugin_set, list):
+            return True
 
         if "*" in plugin_set:
             return True
