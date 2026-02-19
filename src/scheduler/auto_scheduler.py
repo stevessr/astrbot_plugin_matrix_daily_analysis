@@ -35,6 +35,17 @@ class AutoScheduler:
         self.html_render_func = html_render_func
         self.scheduler_task = None
         self.last_execution_date = None  # 记录上次执行日期，防止重复执行
+        self._scheduler_generation = 0
+
+    def _handle_scheduler_task_done(self, task: asyncio.Task) -> None:
+        if self.scheduler_task is task:
+            self.scheduler_task = None
+        try:
+            task.result()
+        except asyncio.CancelledError:
+            pass
+        except Exception as e:
+            logger.error(f"定时任务调度器任务异常退出：{e}")
 
     def set_bot_instance(self, bot_instance):
         """设置 bot 实例（保持向后兼容）"""
@@ -85,9 +96,17 @@ class AutoScheduler:
             return
         if self.scheduler_task and not self.scheduler_task.done():
             return
+        start_generation = self._scheduler_generation
 
         # 延迟启动，给系统时间初始化
         await asyncio.sleep(10)
+        if start_generation != self._scheduler_generation:
+            logger.debug("自动分析调度器启动请求已过期，跳过本次启动")
+            return
+        if self.scheduler_task and not self.scheduler_task.done():
+            return
+        if not self.config_manager.get_enable_auto_analysis():
+            return
 
         logger.info(
             f"启动定时任务调度器，自动分析时间：{self.config_manager.get_auto_analysis_time()}"
@@ -97,9 +116,11 @@ class AutoScheduler:
             self._scheduler_loop(),
             name="matrix-daily-analysis-scheduler",
         )
+        self.scheduler_task.add_done_callback(self._handle_scheduler_task_done)
 
     async def stop_scheduler(self):
         """停止定时任务调度器"""
+        self._scheduler_generation += 1
         if self.scheduler_task and not self.scheduler_task.done():
             self.scheduler_task.cancel()
             try:

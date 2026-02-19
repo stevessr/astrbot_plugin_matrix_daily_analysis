@@ -105,11 +105,19 @@ class matrixGroupDailyAnalysis(Star):
             )
         if self.report_generator is None:
             self.report_generator = ReportGenerator(self.config_manager)
-        if self.retry_manager is None:
+        if (
+            self.retry_manager is None
+            or self.retry_manager.bot_manager is not self.bot_manager
+            or self.retry_manager.report_generator is not self.report_generator
+        ):
             self.retry_manager = RetryManager(
                 self.bot_manager, self.html_render, self.report_generator
             )
-        if self.auto_scheduler is None:
+        if (
+            self.auto_scheduler is None
+            or self.auto_scheduler.bot_manager is not self.bot_manager
+            or self.auto_scheduler.retry_manager is not self.retry_manager
+        ):
             self.auto_scheduler = AutoScheduler(
                 self.config_manager,
                 self.message_analyzer.message_handler,
@@ -195,6 +203,7 @@ class matrixGroupDailyAnalysis(Star):
             self.bot_manager = None
             self.message_analyzer = None
             self.report_generator = None
+            self.retry_manager = None
             self.config_manager = None
 
             logger.info("matrix 群日常分析插件资源清理完成")
@@ -220,7 +229,7 @@ class matrixGroupDailyAnalysis(Star):
             yield event.plain_result("❌ 此功能仅支持 Matrix 群聊/房间")
             return
 
-        group_id = event.session.session_id
+        group_id = event.get_session_id()
         if not group_id:
             yield event.plain_result("❌ 请在群聊中使用此命令")
             return
@@ -394,7 +403,7 @@ class matrixGroupDailyAnalysis(Star):
             yield event.plain_result("❌ 此功能仅支持 Matrix 群聊/房间")
             return
 
-        group_id = event.session.session_id
+        group_id = event.get_session_id()
         if not group_id:
             yield event.plain_result("❌ 请在群聊中使用此命令")
             return
@@ -541,7 +550,7 @@ class matrixGroupDailyAnalysis(Star):
             yield event.plain_result("❌ 此功能仅支持 Matrix 群聊/房间")
             return
 
-        group_id = event.session.session_id
+        group_id = event.get_session_id()
         if not group_id:
             yield event.plain_result("❌ 请在群聊中使用此命令")
             return
@@ -665,7 +674,7 @@ class matrixGroupDailyAnalysis(Star):
             yield event.plain_result("❌ 此功能仅支持 Matrix 群聊/房间")
             return
 
-        group_id = event.session.session_id
+        group_id = event.get_session_id()
         if not group_id:
             yield event.plain_result("❌ 请在群聊中使用此命令")
             return
@@ -795,7 +804,7 @@ class matrixGroupDailyAnalysis(Star):
             yield event.plain_result("❌ 此功能仅支持 Matrix 群聊/房间")
             return
 
-        group_id = event.session.session_id
+        group_id = event.get_session_id()
         if not group_id:
             yield event.plain_result("❌ 请在群聊中使用此命令")
             return
