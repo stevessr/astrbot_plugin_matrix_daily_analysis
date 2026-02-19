@@ -133,6 +133,13 @@ class TopicAnalyzer(BaseAnalyzer):
                     cleaned_text = cleaned_text.replace("\t", " ")
                     cleaned_text = re.sub(r"[\x00-\x1f\x7f-\x9f]", "", cleaned_text)
 
+                    if self.config_manager.get_threading_enabled() and self.config_manager.get_thread_label_in_prompt():
+                        relation_type = str(msg.get("relation_type", "") or "").strip().lower()
+                        thread_root_id = str(msg.get("thread_root_id", "") or "").strip()
+                        if relation_type == "m.thread" and thread_root_id:
+                            short_tid = thread_root_id[-8:] if len(thread_root_id) > 8 else thread_root_id
+                            cleaned_text = f"[thread:{short_tid}] {cleaned_text}"
+
                     text_messages.append(
                         {"sender": nickname, "time": msg_time, "content": cleaned_text}
                     )

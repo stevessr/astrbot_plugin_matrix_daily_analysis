@@ -98,6 +98,24 @@
           }
         }
       },
+      "threading": {
+        "description": "线程消息处理",
+        "type": "object",
+        "items": {
+          "enabled": {
+            "type": "bool",
+            "description": "启用线程语义识别",
+            "default": true,
+            "hint": "识别 Matrix m.thread / reply 关系，并注入分析上下文"
+          },
+          "label_in_prompt": {
+            "type": "bool",
+            "description": "在分析文本中加入线程标签",
+            "default": true,
+            "hint": "开启后会在话题/金句分析输入中追加 thread 标记"
+          }
+        }
+      },
       "topic": {
         "description": "话题分析",
         "type": "object",

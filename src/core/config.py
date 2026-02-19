@@ -256,6 +256,24 @@ class ConfigManager:
         )
         return self._normalize_bool(value, True)
 
+    def get_threading_enabled(self) -> bool:
+        """是否启用线程语义识别"""
+        value = self._get_nested(
+            ("analysis", "threading", "enabled"),
+            True,
+            "threading_enabled",
+        )
+        return self._normalize_bool(value, True)
+
+    def get_thread_label_in_prompt(self) -> bool:
+        """是否在提示词文本中加入线程标签"""
+        value = self._get_nested(
+            ("analysis", "threading", "label_in_prompt"),
+            True,
+            "thread_label_in_prompt",
+        )
+        return self._normalize_bool(value, True)
+
     def get_max_topics(self) -> int:
         """获取最大话题数量"""
         value = self._get_nested(("analysis", "topic", "max_topics"), 5, "max_topics")
@@ -618,6 +636,14 @@ class ConfigManager:
     def set_golden_quote_analysis_enabled(self, enabled: bool):
         """设置是否启用金句分析"""
         self._set_nested(("analysis", "golden_quote", "enabled"), enabled)
+
+    def set_threading_enabled(self, enabled: bool):
+        """设置是否启用线程语义识别"""
+        self._set_nested(("analysis", "threading", "enabled"), enabled)
+
+    def set_thread_label_in_prompt(self, enabled: bool):
+        """设置是否在提示词文本中加入线程标签"""
+        self._set_nested(("analysis", "threading", "label_in_prompt"), enabled)
 
     def set_max_topics(self, count: int):
         """设置最大话题数量"""

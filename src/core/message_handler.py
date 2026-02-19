@@ -168,6 +168,7 @@ class MessageHandler:
 
                         content = event.get("content", {})
                         sender = event.get("sender")
+                        event_id = str(event.get("event_id", "") or "")
 
                         # 过滤机器人自己的消息
                         if (
@@ -179,11 +180,44 @@ class MessageHandler:
                         # 获取昵称
                         nickname = display_names.get(sender, sender)
 
+                        relation_type = ""
+                        thread_root_id = ""
+                        reply_event_id = ""
+                        if self.config_manager.get_threading_enabled() and isinstance(
+                            content, dict
+                        ):
+                            relates_to = content.get("m.relates_to", {})
+                            if isinstance(relates_to, dict):
+                                relation_type = str(relates_to.get("rel_type", "") or "")
+                                thread_entry = relates_to.get("m.thread")
+                                if isinstance(thread_entry, dict):
+                                    thread_root_id = str(
+                                        thread_entry.get("event_id", "") or ""
+                                    )
+                                    thread_reply = thread_entry.get("m.in_reply_to")
+                                    if isinstance(thread_reply, dict):
+                                        reply_event_id = str(
+                                            thread_reply.get("event_id", "") or ""
+                                        )
+                                if not thread_root_id:
+                                    thread_root_id = str(
+                                        relates_to.get("event_id", "") or ""
+                                    )
+                                if not reply_event_id:
+                                    reply = relates_to.get("m.in_reply_to")
+                                    if isinstance(reply, dict):
+                                        reply_event_id = str(
+                                            reply.get("event_id", "") or ""
+                                        )
+
                         # 转换消息格式
                         msg_dict = {
                             "time": ts / 1000,
                             "sender": {"user_id": sender, "nickname": nickname},
                             "message": [],
+                            "event_id": event_id,
+                            "relation_type": relation_type,
+                            "thread_root_id": thread_root_id,
                         }
 
                         msg_type = content.get("msgtype")
@@ -194,6 +228,13 @@ class MessageHandler:
                                     "data": {"text": content.get("body", "")},
                                 }
                             )
+                            if reply_event_id:
+                                msg_dict["message"].append(
+                                    {
+                                        "type": "reply",
+                                        "data": {"id": reply_event_id},
+                                    }
+                                )
                         elif msg_type == "m.image":
                             msg_dict["message"].append(
                                 {
