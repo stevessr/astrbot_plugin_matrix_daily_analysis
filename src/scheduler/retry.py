@@ -89,13 +89,28 @@ class RetryManager:
         normalized = str(platform_id or "").strip()
         if normalized:
             bot = self.bot_manager.get_bot_instance(normalized)
-            if bot and self._is_matrix_platform_id(normalized):
+            plugin_enabled = True
+            if hasattr(self.bot_manager, "is_plugin_enabled"):
+                plugin_enabled = self.bot_manager.is_plugin_enabled(
+                    normalized, "astrbot_plugin_matrix_daily_analysis"
+                )
+            if bot and self._is_matrix_platform_id(normalized) and plugin_enabled:
                 return normalized, bot
 
         bot_instances = getattr(self.bot_manager, "_bot_instances", {})
         if isinstance(bot_instances, dict):
             for fallback_platform_id, bot in bot_instances.items():
-                if bot and self._is_matrix_platform_id(fallback_platform_id):
+                plugin_enabled = True
+                if hasattr(self.bot_manager, "is_plugin_enabled"):
+                    plugin_enabled = self.bot_manager.is_plugin_enabled(
+                        fallback_platform_id,
+                        "astrbot_plugin_matrix_daily_analysis",
+                    )
+                if (
+                    bot
+                    and self._is_matrix_platform_id(fallback_platform_id)
+                    and plugin_enabled
+                ):
                     return str(fallback_platform_id), bot
         return None, None
 

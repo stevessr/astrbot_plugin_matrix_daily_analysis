@@ -145,6 +145,17 @@ class matrixGroupDailyAnalysis(Star):
             self._delayed_start_scheduler(),
             name="matrix-daily-analysis-delayed-start",
         )
+        self._delayed_start_task.add_done_callback(self._handle_delayed_start_task_done)
+
+    def _handle_delayed_start_task_done(self, task: asyncio.Task) -> None:
+        if self._delayed_start_task is task:
+            self._delayed_start_task = None
+        try:
+            task.result()
+        except asyncio.CancelledError:
+            pass
+        except Exception as e:
+            logger.error(f"延迟启动任务异常退出：{e}")
 
     @staticmethod
     def _resolve_group_id(event: AstrMessageEvent) -> str | None:

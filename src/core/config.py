@@ -4,6 +4,7 @@
 """
 
 import sys
+from datetime import datetime
 
 from astrbot.api import AstrBotConfig, logger
 from astrbot.core.utils.astrbot_path import get_astrbot_data_path
@@ -68,13 +69,57 @@ class ConfigManager:
         self.config[root_key] = root
         self.config.save_config()
 
+    @staticmethod
+    def _normalize_bool(value: object, default: bool) -> bool:
+        if isinstance(value, bool):
+            return value
+        if value is None:
+            return default
+        raw = str(value).strip().lower()
+        if raw in {"1", "true", "yes", "on", "enable", "enabled"}:
+            return True
+        if raw in {"0", "false", "no", "off", "disable", "disabled"}:
+            return False
+        return default
+
+    @staticmethod
+    def _normalize_int(
+        value: object,
+        default: int,
+        *,
+        minimum: int | None = None,
+        maximum: int | None = None,
+    ) -> int:
+        try:
+            normalized = int(value)
+        except (TypeError, ValueError):
+            normalized = default
+        if minimum is not None:
+            normalized = max(minimum, normalized)
+        if maximum is not None:
+            normalized = min(maximum, normalized)
+        return normalized
+
     def get_group_list_mode(self) -> str:
         """获取群组列表模式 (whitelist/blacklist/none)"""
-        return self._get_nested(("group_access", "mode"), "none", "group_list_mode")
+        raw_mode = (
+            str(
+                self._get_nested(("group_access", "mode"), "none", "group_list_mode")
+                or "none"
+            )
+            .strip()
+            .lower()
+        )
+        if raw_mode in {"whitelist", "blacklist", "none"}:
+            return raw_mode
+        return "none"
 
     def get_group_list(self) -> list[str]:
         """获取群组列表（用于黑白名单）"""
-        return self._get_nested(("group_access", "list"), [], "group_list")
+        raw_list = self._get_nested(("group_access", "list"), [], "group_list")
+        if not isinstance(raw_list, list):
+            return []
+        return [str(item) for item in raw_list if str(item or "").strip()]
 
     def is_group_allowed(self, group_id: str) -> bool:
         """根据配置的白/黑名单判断是否允许在该群聊中使用"""
@@ -98,13 +143,15 @@ class ConfigManager:
 
     def get_max_concurrent_tasks(self) -> int:
         """获取自动分析最大并发数"""
-        return self._get_nested(
+        value = self._get_nested(
             ("analysis", "max_concurrent_tasks"), 5, "max_concurrent_tasks"
         )
+        return self._normalize_int(value, 5, minimum=1)
 
     def get_max_messages(self) -> int:
         """获取最大消息数量"""
-        return self._get_nested(("analysis", "max_messages"), 1000, "max_messages")
+        value = self._get_nested(("analysis", "max_messages"), 1000, "max_messages")
+        return self._normalize_int(value, 1000, minimum=1)
 
     def get_analysis_days(self) -> int:
         """获取分析天数"""
@@ -113,157 +160,205 @@ class ConfigManager:
 
     def get_history_filter_prefixes(self) -> list[str]:
         """获取历史消息过滤前缀（全局）"""
-        return self._get_nested(
+        raw_value = self._get_nested(
             ("analysis", "history_filters", "prefixes"),
             [],
             "history_filter_prefixes",
         )
+        if not isinstance(raw_value, list):
+            return []
+        return [str(item) for item in raw_value if str(item or "").strip()]
 
     def get_history_filter_users(self) -> list[str]:
         """获取历史消息过滤用户（全局）"""
-        return self._get_nested(
+        raw_value = self._get_nested(
             ("analysis", "history_filters", "users"),
             [],
             "history_filter_users",
         )
+        if not isinstance(raw_value, list):
+            return []
+        return [str(item) for item in raw_value if str(item or "").strip()]
 
     def should_skip_history_bots(self) -> bool:
         """判断是否全局跳过机器人发言"""
-        return self._get_nested(
+        value = self._get_nested(
             ("analysis", "history_filters", "skip_bots"),
             True,
             "history_filter_skip_bots",
         )
+        return self._normalize_bool(value, True)
 
     def get_auto_analysis_time(self) -> str:
         """获取自动分析时间"""
-        return self._get_nested(
+        auto_time = self._get_nested(
             ("auto_analysis", "time"), "09:00", "auto_analysis_time"
         )
+        normalized = self._normalize_auto_analysis_time(auto_time)
+        if normalized is None:
+            logger.warning(f"自动分析时间配置无效：{auto_time!r}，已回退默认值 09:00")
+            return "09:00"
+        return normalized
 
     def get_enable_auto_analysis(self) -> bool:
         """获取是否启用自动分析"""
-        return self._get_nested(
+        value = self._get_nested(
             ("auto_analysis", "enabled"), False, "enable_auto_analysis"
         )
+        return self._normalize_bool(value, False)
 
     def get_output_format(self) -> str:
         """获取输出格式"""
-        return self._get_nested(("output", "format"), "image", "output_format")
+        raw_format = (
+            str(
+                self._get_nested(("output", "format"), "image", "output_format")
+                or "image"
+            )
+            .strip()
+            .lower()
+        )
+        if raw_format in {"image", "text", "pdf"}:
+            return raw_format
+        return "image"
 
     def get_min_messages_threshold(self) -> int:
         """获取最小消息阈值"""
-        return self._get_nested(
+        value = self._get_nested(
             ("analysis", "min_messages_threshold"), 50, "min_messages_threshold"
         )
+        return self._normalize_int(value, 50, minimum=1)
 
     def get_topic_analysis_enabled(self) -> bool:
         """获取是否启用话题分析"""
-        return self._get_nested(
+        value = self._get_nested(
             ("analysis", "topic", "enabled"), True, "topic_analysis_enabled"
         )
+        return self._normalize_bool(value, True)
 
     def get_user_title_analysis_enabled(self) -> bool:
         """获取是否启用用户称号分析"""
-        return self._get_nested(
+        value = self._get_nested(
             ("analysis", "user_title", "enabled"), True, "user_title_analysis_enabled"
         )
+        return self._normalize_bool(value, True)
 
     def get_golden_quote_analysis_enabled(self) -> bool:
         """获取是否启用金句分析"""
-        return self._get_nested(
+        value = self._get_nested(
             ("analysis", "golden_quote", "enabled"),
             True,
             "golden_quote_analysis_enabled",
         )
+        return self._normalize_bool(value, True)
 
     def get_max_topics(self) -> int:
         """获取最大话题数量"""
-        return self._get_nested(("analysis", "topic", "max_topics"), 5, "max_topics")
+        value = self._get_nested(("analysis", "topic", "max_topics"), 5, "max_topics")
+        return self._normalize_int(value, 5, minimum=1)
 
     def get_max_user_titles(self) -> int:
         """获取最大用户称号数量"""
-        return self._get_nested(
+        value = self._get_nested(
             ("analysis", "user_title", "max_titles"), 8, "max_user_titles"
         )
+        return self._normalize_int(value, 8, minimum=1)
 
     def get_max_golden_quotes(self) -> int:
         """获取最大金句数量"""
-        return self._get_nested(
+        value = self._get_nested(
             ("analysis", "golden_quote", "max_quotes"), 5, "max_golden_quotes"
         )
+        return self._normalize_int(value, 5, minimum=1)
 
     def get_llm_timeout(self) -> int:
         """获取 LLM 请求超时时间（秒）"""
-        return self._get_nested(("llm", "timeout"), 30, "llm_timeout")
+        value = self._get_nested(("llm", "timeout"), 30, "llm_timeout")
+        return self._normalize_int(value, 30, minimum=1)
 
     def get_llm_retries(self) -> int:
         """获取 LLM 请求重试次数"""
-        return self._get_nested(("llm", "retries"), 2, "llm_retries")
+        value = self._get_nested(("llm", "retries"), 2, "llm_retries")
+        return self._normalize_int(value, 2, minimum=0)
 
     def get_llm_backoff(self) -> int:
         """获取 LLM 请求重试退避基值（秒），实际退避会乘以尝试次数"""
-        return self._get_nested(("llm", "backoff"), 2, "llm_backoff")
+        value = self._get_nested(("llm", "backoff"), 2, "llm_backoff")
+        return self._normalize_int(value, 2, minimum=0)
 
     def get_topic_max_tokens(self) -> int:
         """获取话题分析最大 token 数"""
-        return self._get_nested(
+        value = self._get_nested(
             ("analysis", "topic", "max_tokens"), 12288, "topic_max_tokens"
         )
+        return self._normalize_int(value, 12288, minimum=1)
 
     def get_golden_quote_max_tokens(self) -> int:
         """获取金句分析最大 token 数"""
-        return self._get_nested(
+        value = self._get_nested(
             ("analysis", "golden_quote", "max_tokens"), 4096, "golden_quote_max_tokens"
         )
+        return self._normalize_int(value, 4096, minimum=1)
 
     def get_user_title_max_tokens(self) -> int:
         """获取用户称号分析最大 token 数"""
-        return self._get_nested(
+        value = self._get_nested(
             ("analysis", "user_title", "max_tokens"), 4096, "user_title_max_tokens"
         )
+        return self._normalize_int(value, 4096, minimum=1)
 
     def get_llm_provider_id(self) -> str:
         """获取主 LLM Provider ID"""
-        return self._get_nested(("llm", "provider_id"), "", "llm_provider_id")
+        return str(
+            self._get_nested(("llm", "provider_id"), "", "llm_provider_id") or ""
+        ).strip()
 
     def get_use_reaction_for_progress(self) -> bool:
         """是否使用 reaction 替代进度提示"""
-        return self._get_nested(
+        value = self._get_nested(
             ("interaction", "use_reaction_for_progress"),
             False,
             "use_reaction_for_progress",
         )
+        return self._normalize_bool(value, False)
 
     def get_progress_reaction_emoji(self) -> str:
         """进度提示使用的 reaction 表情"""
-        return self._get_nested(
-            ("interaction", "progress_reaction_emoji"),
-            "🫪",
-            "progress_reaction_emoji",
-        )
+        raw_emoji = str(
+            self._get_nested(
+                ("interaction", "progress_reaction_emoji"),
+                "🗳️",
+                "progress_reaction_emoji",
+            )
+            or ""
+        ).strip()
+        return raw_emoji or "🗳️"
 
     def get_topic_provider_id(self) -> str:
         """获取话题分析专用 Provider ID"""
-        return self._get_nested(
-            ("analysis", "topic", "provider_id"), "", "topic_provider_id"
-        )
+        return str(
+            self._get_nested(
+                ("analysis", "topic", "provider_id"), "", "topic_provider_id"
+            )
+            or ""
+        ).strip()
 
     def get_dialogue_poll_max_tokens(self) -> int:
         """对话投票生成的最大 token 限制"""
-        return self._get_nested(
+        value = self._get_nested(
             ("analysis", "dialogue_poll", "max_tokens"),
             400,
             "dialogue_poll_max_tokens",
         )
+        return self._normalize_int(value, 400, minimum=1)
 
     def get_dialogue_poll_max_options(self) -> int:
         """对话投票生成的候选数量"""
-        return self._get_nested(
+        value = self._get_nested(
             ("analysis", "dialogue_poll", "max_options"),
             5,
             "dialogue_poll_max_options",
         )
+        return self._normalize_int(value, 5, minimum=2)
 
     def get_dialogue_poll_prompt(self) -> str:
         """对话投票生成的提示词模板"""
@@ -275,33 +370,54 @@ class ConfigManager:
 
     def get_user_title_provider_id(self) -> str:
         """获取用户称号分析专用 Provider ID"""
-        return self._get_nested(
-            ("analysis", "user_title", "provider_id"), "", "user_title_provider_id"
-        )
+        return str(
+            self._get_nested(
+                ("analysis", "user_title", "provider_id"),
+                "",
+                "user_title_provider_id",
+            )
+            or ""
+        ).strip()
 
     def get_golden_quote_provider_id(self) -> str:
         """获取金句分析专用 Provider ID"""
-        return self._get_nested(
-            ("analysis", "golden_quote", "provider_id"), "", "golden_quote_provider_id"
-        )
+        return str(
+            self._get_nested(
+                ("analysis", "golden_quote", "provider_id"),
+                "",
+                "golden_quote_provider_id",
+            )
+            or ""
+        ).strip()
 
     def get_personal_report_provider_id(self) -> str:
         """获取个人报告分析专用 Provider ID"""
-        return self._get_nested(
-            ("analysis", "personal_report", "provider_id"), "", "personal_report_provider_id"
-        )
+        return str(
+            self._get_nested(
+                ("analysis", "personal_report", "provider_id"),
+                "",
+                "personal_report_provider_id",
+            )
+            or ""
+        ).strip()
 
     def get_personal_report_max_tokens(self) -> int:
         """获取个人报告分析最大 token 数"""
-        return self._get_nested(
-            ("analysis", "personal_report", "max_tokens"), 800, "personal_report_max_tokens"
+        value = self._get_nested(
+            ("analysis", "personal_report", "max_tokens"),
+            800,
+            "personal_report_max_tokens",
         )
+        return self._normalize_int(value, 800, minimum=1)
 
     def get_personal_report_max_messages(self) -> int:
         """获取个人报告分析的最大消息数"""
-        return self._get_nested(
-            ("analysis", "personal_report", "max_messages"), 100, "personal_report_max_messages"
+        value = self._get_nested(
+            ("analysis", "personal_report", "max_messages"),
+            100,
+            "personal_report_max_messages",
         )
+        return self._normalize_int(value, 100, minimum=1)
 
     def get_personal_report_prompt(self) -> str:
         """获取个人报告分析提示词模板"""
@@ -454,7 +570,24 @@ class ConfigManager:
 
     def set_auto_analysis_time(self, time_str: str):
         """设置自动分析时间"""
-        self._set_nested(("auto_analysis", "time"), time_str)
+        normalized = self._normalize_auto_analysis_time(time_str)
+        if normalized is None:
+            logger.warning(
+                f"尝试设置无效的自动分析时间：{time_str!r}，已回退默认值 09:00"
+            )
+            normalized = "09:00"
+        self._set_nested(("auto_analysis", "time"), normalized)
+
+    @staticmethod
+    def _normalize_auto_analysis_time(value: object) -> str | None:
+        raw = str(value or "").strip()
+        if not raw:
+            return None
+        try:
+            parsed = datetime.strptime(raw, "%H:%M")
+        except ValueError:
+            return None
+        return parsed.strftime("%H:%M")
 
     def set_enable_auto_analysis(self, enabled: bool):
         """设置是否启用自动分析"""
@@ -563,7 +696,6 @@ class ConfigManager:
             # 强制重新导入
             try:
                 import playwright
-                from playwright.async_api import async_playwright
 
                 # 更新全局变量
                 self._playwright_available = True
