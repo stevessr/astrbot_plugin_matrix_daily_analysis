@@ -83,7 +83,7 @@ class AutoScheduler:
             return False
         try:
             meta = platform.meta()
-            return str(getattr(meta, "name", "") or "") == "matrix"
+            return str(getattr(meta, "name", "") or "").strip().lower() == "matrix"
         except Exception:
             return False
 

@@ -73,15 +73,17 @@ async def _try_get_first_available_provider_id(context) -> str | None:
     """
     try:
         all_providers = context.get_all_providers()
-        if all_providers and len(all_providers) > 0:
-            provider = all_providers[0]
+        providers = list(all_providers or [])
+        for provider in providers:
             try:
                 meta = provider.meta()
-                provider_id = meta.id
-                logger.info(f"✓ 使用第一个可用 Provider: {provider_id}")
+                provider_id = str(getattr(meta, "id", "") or "").strip()
+                if not provider_id:
+                    continue
+                logger.info(f"✓ 使用可用 Provider: {provider_id}")
                 return provider_id
             except Exception:
-                logger.warning("第一个 Provider 无法获取 ID")
+                logger.debug("存在 Provider 无法获取 ID，已跳过")
     except Exception as e:
         logger.warning(f"无法获取任何 Provider: {e}")
     return None

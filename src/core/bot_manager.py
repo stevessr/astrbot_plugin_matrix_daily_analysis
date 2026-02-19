@@ -153,7 +153,8 @@ class BotManager:
 
             platform_name, platform_id = self._extract_platform_meta(platform)
             # matrix_daily_analysis 仅支持 Matrix
-            if platform_name and platform_name != "matrix":
+            normalized_platform_name = str(platform_name or "").strip().lower()
+            if normalized_platform_name and normalized_platform_name != "matrix":
                 continue
 
             normalized_platform_id = str(platform_id or "matrix")
@@ -197,7 +198,7 @@ class BotManager:
         # 只支持 Matrix
         platform_name = None
         if hasattr(event, "get_platform_name"):
-            platform_name = event.get_platform_name()
+            platform_name = str(event.get_platform_name() or "").strip().lower()
 
         if platform_name != "matrix":
             return False
@@ -260,7 +261,9 @@ class BotManager:
         # 检查是否在 matrix 号列表中
         return sender_id_str in self._bot_matrix_ids
 
-    def get_platform(self, platform_id: str | None = None, platform_name: str | None = None):
+    def get_platform(
+        self, platform_id: str | None = None, platform_name: str | None = None
+    ):
         """获取平台实例（用于访问 sender 等平台能力）"""
         if platform_id and platform_id in self._platforms:
             return self._platforms[platform_id]

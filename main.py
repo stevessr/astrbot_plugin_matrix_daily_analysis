@@ -252,7 +252,7 @@ class matrixGroupDailyAnalysis(Star):
         if self.config_manager is None:
             yield event.plain_result("❌ 配置初始化失败，请重启插件后重试")
             return
-        platform_name = event.get_platform_name()
+        platform_name = str(event.get_platform_name() or "").strip().lower()
         if platform_name != "matrix":
             yield event.plain_result("❌ 此功能仅支持 Matrix 群聊/房间")
             return
@@ -426,7 +426,7 @@ class matrixGroupDailyAnalysis(Star):
         )
 
         self._ensure_components()
-        platform_name = event.get_platform_name()
+        platform_name = str(event.get_platform_name() or "").strip().lower()
         if platform_name != "matrix":
             yield event.plain_result("❌ 此功能仅支持 Matrix 群聊/房间")
             return
@@ -573,7 +573,7 @@ class matrixGroupDailyAnalysis(Star):
         用法：/设置格式 [image|text|pdf]
         """
         self._ensure_components()
-        platform_name = event.get_platform_name()
+        platform_name = str(event.get_platform_name() or "").strip().lower()
         if platform_name != "matrix":
             yield event.plain_result("❌ 此功能仅支持 Matrix 群聊/房间")
             return
@@ -600,7 +600,7 @@ class matrixGroupDailyAnalysis(Star):
         用法：/设置模板 [模板名称或序号]
         """
         self._ensure_components()
-        platform_name = event.get_platform_name()
+        platform_name = str(event.get_platform_name() or "").strip().lower()
         if platform_name != "matrix":
             yield event.plain_result("❌ 此功能仅支持 Matrix 群聊/房间")
             return
@@ -626,7 +626,7 @@ class matrixGroupDailyAnalysis(Star):
         用法：/查看模板
         """
         self._ensure_components()
-        platform_name = event.get_platform_name()
+        platform_name = str(event.get_platform_name() or "").strip().lower()
         if platform_name != "matrix":
             yield event.plain_result("❌ 此功能仅支持 Matrix 群聊/房间")
             return
@@ -677,7 +677,7 @@ class matrixGroupDailyAnalysis(Star):
         用法：/安装 PDF
         """
         self._ensure_components()
-        platform_name = event.get_platform_name()
+        platform_name = str(event.get_platform_name() or "").strip().lower()
         if platform_name != "matrix":
             yield event.plain_result("❌ 此功能仅支持 Matrix 群聊/房间")
             return
@@ -697,7 +697,7 @@ class matrixGroupDailyAnalysis(Star):
         if self.config_manager is None:
             yield event.plain_result("❌ 配置初始化失败，请重启插件后重试")
             return
-        platform_name = event.get_platform_name()
+        platform_name = str(event.get_platform_name() or "").strip().lower()
         if platform_name != "matrix":
             yield event.plain_result("❌ 此功能仅支持 Matrix 群聊/房间")
             return
@@ -827,7 +827,7 @@ class matrixGroupDailyAnalysis(Star):
         - test: 测试自动分析功能
         """
         self._ensure_components()
-        platform_name = event.get_platform_name()
+        platform_name = str(event.get_platform_name() or "").strip().lower()
         if platform_name != "matrix":
             yield event.plain_result("❌ 此功能仅支持 Matrix 群聊/房间")
             return
