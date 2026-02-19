@@ -32,6 +32,8 @@ class UserAnalyzer:
         )
 
         for msg in messages:
+            if not isinstance(msg, dict):
+                continue
             sender = msg.get("sender", {})
             user_id = str(sender.get("user_id", ""))
 
@@ -49,7 +51,12 @@ class UserAnalyzer:
             user_stats[user_id]["hours"][msg_time.hour] += 1
 
             # 处理消息内容
-            for content in msg.get("message", []):
+            message_items = msg.get("message", [])
+            if not isinstance(message_items, list):
+                continue
+            for content in message_items:
+                if not isinstance(content, dict):
+                    continue
                 if content.get("type") == "text":
                     text = content.get("data", {}).get("text", "")
                     user_stats[user_id]["char_count"] += len(text)
@@ -87,7 +94,9 @@ class UserAnalyzer:
         users = []
         for user_id, stats in user_analysis.items():
             # 过滤机器人自己
-            if bot_matrix_ids and str(user_id) in [str(matrix) for matrix in bot_matrix_ids]:
+            if bot_matrix_ids and str(user_id) in [
+                str(matrix) for matrix in bot_matrix_ids
+            ]:
                 continue
 
             users.append(

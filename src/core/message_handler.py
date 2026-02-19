@@ -96,7 +96,12 @@ class MessageHandler:
             return []
 
     async def _fetch_matrix_messages(
-        self, bot_instance, group_id: str, days: int, start_time: datetime, end_time: datetime
+        self,
+        bot_instance,
+        group_id: str,
+        days: int,
+        start_time: datetime,
+        end_time: datetime,
     ) -> list[dict]:
         """从 Matrix 平台获取群聊消息"""
         messages = []
@@ -111,7 +116,9 @@ class MessageHandler:
             # 获取群成员列表以填充昵称
             display_names = {}
             try:
-                client = bot_instance.api if hasattr(bot_instance, "api") else bot_instance
+                client = (
+                    bot_instance.api if hasattr(bot_instance, "api") else bot_instance
+                )
                 if hasattr(client, "get_room_members"):
                     members_resp = await client.get_room_members(group_id)
                     member_events = members_resp.get("chunk", [])
@@ -181,7 +188,10 @@ class MessageHandler:
                         msg_type = content.get("msgtype")
                         if msg_type == "m.text":
                             msg_dict["message"].append(
-                                {"type": "text", "data": {"text": content.get("body", "")}}
+                                {
+                                    "type": "text",
+                                    "data": {"text": content.get("body", "")},
+                                }
                             )
                         elif msg_type == "m.image":
                             msg_dict["message"].append(
@@ -229,6 +239,8 @@ class MessageHandler:
         emoji_statistics = EmojiStatistics()
 
         for msg in messages:
+            if not isinstance(msg, dict):
+                continue
             sender_id = str(msg.get("sender", {}).get("user_id", ""))
             participants.add(sender_id)
 
@@ -237,7 +249,12 @@ class MessageHandler:
             hour_counts[msg_time.hour] += 1
 
             # 处理消息内容
-            for content in msg.get("message", []):
+            message_items = msg.get("message", [])
+            if not isinstance(message_items, list):
+                continue
+            for content in message_items:
+                if not isinstance(content, dict):
+                    continue
                 if content.get("type") == "text":
                     text = content.get("data", {}).get("text", "")
                     total_chars += len(text)

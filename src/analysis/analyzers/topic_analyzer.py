@@ -78,7 +78,9 @@ class TopicAnalyzer(BaseAnalyzer):
                 bot_matrix_ids = self.config_manager.get_bot_matrix_ids()
 
                 # 跳过机器人自己的消息
-                if bot_matrix_ids and user_id in [str(matrix) for matrix in bot_matrix_ids]:
+                if bot_matrix_ids and user_id in [
+                    str(matrix) for matrix in bot_matrix_ids
+                ]:
                     continue
 
                 nickname = InfoUtils.get_user_nickname(self.config_manager, sender)
@@ -296,14 +298,23 @@ class TopicAnalyzer(BaseAnalyzer):
                 bot_matrix_ids = self.config_manager.get_bot_matrix_ids()
 
                 # 跳过机器人自己的消息
-                if bot_matrix_ids and user_id in [str(matrix) for matrix in bot_matrix_ids]:
-                    logger.debug(f"extract_text_messages 过滤掉机器人 matrix 号：{user_id}")
+                if bot_matrix_ids and user_id in [
+                    str(matrix) for matrix in bot_matrix_ids
+                ]:
+                    logger.debug(
+                        f"extract_text_messages 过滤掉机器人 matrix 号：{user_id}"
+                    )
                     continue
 
                 nickname = InfoUtils.get_user_nickname(self.config_manager, sender)
                 msg_time = datetime.fromtimestamp(msg.get("time", 0)).strftime("%H:%M")
 
-                for content in msg.get("message", []):
+                message_items = msg.get("message", [])
+                if not isinstance(message_items, list):
+                    continue
+                for content in message_items:
+                    if not isinstance(content, dict):
+                        continue
                     if content.get("type") == "text":
                         text = content.get("data", {}).get("text", "").strip()
                         if text and len(text) > 2 and not text.startswith("/"):

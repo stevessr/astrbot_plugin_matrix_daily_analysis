@@ -44,7 +44,12 @@ class ActivityVisualizer:
             # }
 
             # 统计每小时表情数
-            for content in msg.get("message", []):
+            message_items = msg.get("message", [])
+            if not isinstance(message_items, list):
+                continue
+            for content in message_items:
+                if not isinstance(content, dict):
+                    continue
                 if content.get("type") in ["face", "mface", "bface", "sface"]:
                     emoji_activity[hour] += 1
                 elif content.get("type") == "image":

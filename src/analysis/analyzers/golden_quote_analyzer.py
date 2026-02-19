@@ -140,11 +140,18 @@ class GoldenQuoteAnalyzer(BaseAnalyzer):
             interesting_messages = []
 
             for msg in messages:
+                if not isinstance(msg, dict):
+                    continue
                 sender = msg.get("sender", {})
                 nickname = InfoUtils.get_user_nickname(self.config_manager, sender)
                 msg_time = datetime.fromtimestamp(msg.get("time", 0)).strftime("%H:%M")
 
-                for content in msg.get("message", []):
+                message_items = msg.get("message", [])
+                if not isinstance(message_items, list):
+                    continue
+                for content in message_items:
+                    if not isinstance(content, dict):
+                        continue
                     if content.get("type") == "text":
                         text = content.get("data", {}).get("text", "").strip()
                         # 过滤长度适中、可能圣经的消息

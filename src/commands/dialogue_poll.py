@@ -64,6 +64,8 @@ class DialoguePollHandler:
         skip_bot = self.config_manager.should_skip_history_bots()
         entries: list[tuple[float, str, str]] = []
         for msg in messages:
+            if not isinstance(msg, dict):
+                continue
             sender = (
                 msg.get("sender", {}).get("nickname")
                 or msg.get("sender", {}).get("user_id")
@@ -71,7 +73,12 @@ class DialoguePollHandler:
             )
             msg_time = msg.get("time", 0) or 0
             sender_id = str(msg.get("sender", {}).get("user_id") or "").strip()
-            for content in msg.get("message", []):
+            message_items = msg.get("message", [])
+            if not isinstance(message_items, list):
+                continue
+            for content in message_items:
+                if not isinstance(content, dict):
+                    continue
                 if content.get("type") != "text":
                     continue
                 text = content.get("data", {}).get("text", "").strip()
