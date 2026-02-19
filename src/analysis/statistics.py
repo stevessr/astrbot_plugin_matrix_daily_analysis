@@ -4,8 +4,8 @@
 """
 
 from collections import defaultdict
-from datetime import datetime
 
+from ..utils.time_utils import get_hour_from_timestamp
 from .utils import InfoUtils
 
 
@@ -47,8 +47,8 @@ class UserAnalyzer:
             user_stats[user_id]["nickname"] = nickname
 
             # 统计时间分布
-            msg_time = datetime.fromtimestamp(msg.get("time", 0))
-            user_stats[user_id]["hours"][msg_time.hour] += 1
+            hour = get_hour_from_timestamp(msg.get("time", 0))
+            user_stats[user_id]["hours"][hour] += 1
 
             # 处理消息内容
             message_items = msg.get("message", [])

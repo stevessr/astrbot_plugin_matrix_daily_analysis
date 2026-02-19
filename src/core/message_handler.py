@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from astrbot.api import logger
 
 from ...src.models.data_models import EmojiStatistics, GroupStatistics, TokenUsage
+from ...src.utils.time_utils import get_hour_from_timestamp
 from ...src.visualization.activity_charts import ActivityVisualizer
 
 
@@ -245,8 +246,8 @@ class MessageHandler:
             participants.add(sender_id)
 
             # 统计时间分布
-            msg_time = datetime.fromtimestamp(msg.get("time", 0))
-            hour_counts[msg_time.hour] += 1
+            hour = get_hour_from_timestamp(msg.get("time", 0))
+            hour_counts[hour] += 1
 
             # 处理消息内容
             message_items = msg.get("message", [])

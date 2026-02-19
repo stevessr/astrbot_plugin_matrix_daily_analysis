@@ -4,11 +4,11 @@
 """
 
 import re
-from datetime import datetime
 
 from astrbot.api import logger
 
 from ...models.data_models import SummaryTopic, TokenUsage
+from ...utils.time_utils import format_timestamp_hm
 from ..utils import InfoUtils
 from ..utils.json_utils import extract_topics_with_regex
 from .base_analyzer import BaseAnalyzer
@@ -84,9 +84,11 @@ class TopicAnalyzer(BaseAnalyzer):
                     continue
 
                 nickname = InfoUtils.get_user_nickname(self.config_manager, sender)
-                msg_time = datetime.fromtimestamp(msg.get("time", 0)).strftime("%H:%M")
+                msg_time = format_timestamp_hm(msg.get("time", 0))
 
                 message_list = msg.get("message", [])
+                if not isinstance(message_list, list):
+                    continue
 
                 # 提取文本内容，可能分布在多个 content 中
                 text_parts = []
@@ -307,7 +309,7 @@ class TopicAnalyzer(BaseAnalyzer):
                     continue
 
                 nickname = InfoUtils.get_user_nickname(self.config_manager, sender)
-                msg_time = datetime.fromtimestamp(msg.get("time", 0)).strftime("%H:%M")
+                msg_time = format_timestamp_hm(msg.get("time", 0))
 
                 message_items = msg.get("message", [])
                 if not isinstance(message_items, list):
@@ -319,8 +321,8 @@ class TopicAnalyzer(BaseAnalyzer):
                         text = content.get("data", {}).get("text", "").strip()
                         if text and len(text) > 2 and not text.startswith("/"):
                             # 清理消息内容
-                            text = text.replace('""', '"').replace('""', '"')
-                            text = text.replace(""", "'").replace(""", "'")
+                            text = text.replace("“", '"').replace("”", '"')
+                            text = text.replace("‘", "'").replace("’", "'")
                             text = text.replace("\n", " ").replace("\r", " ")
                             text = text.replace("\t", " ")
                             text = re.sub(r"[\x00-\x1f\x7f-\x9f]", "", text)

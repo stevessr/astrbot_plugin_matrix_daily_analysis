@@ -3,11 +3,10 @@
 专门处理群聊金句提取和分析
 """
 
-from datetime import datetime
-
 from astrbot.api import logger
 
 from ...models.data_models import GoldenQuote, TokenUsage
+from ...utils.time_utils import format_timestamp_hm
 from ..utils import InfoUtils
 from ..utils.json_utils import extract_golden_quotes_with_regex
 from .base_analyzer import BaseAnalyzer
@@ -143,8 +142,10 @@ class GoldenQuoteAnalyzer(BaseAnalyzer):
                 if not isinstance(msg, dict):
                     continue
                 sender = msg.get("sender", {})
+                if not isinstance(sender, dict):
+                    continue
                 nickname = InfoUtils.get_user_nickname(self.config_manager, sender)
-                msg_time = datetime.fromtimestamp(msg.get("time", 0)).strftime("%H:%M")
+                msg_time = format_timestamp_hm(msg.get("time", 0))
 
                 message_items = msg.get("message", [])
                 if not isinstance(message_items, list):
@@ -194,7 +195,6 @@ class GoldenQuoteAnalyzer(BaseAnalyzer):
                 logger.info("没有符合条件的圣经消息，返回空结果")
                 return [], TokenUsage()
 
-            logger.info(f"开始从 {len(interesting_messages)} 条圣经消息中提取金句")
             logger.info(f"开始从 {len(interesting_messages)} 条圣经消息中提取金句")
             quotes, usage = await self.analyze(interesting_messages, umo)
 
