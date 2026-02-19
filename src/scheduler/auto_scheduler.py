@@ -83,6 +83,8 @@ class AutoScheduler:
         if not self.config_manager.get_enable_auto_analysis():
             logger.info("自动分析功能未启用")
             return
+        if self.scheduler_task and not self.scheduler_task.done():
+            return
 
         # 延迟启动，给系统时间初始化
         await asyncio.sleep(10)
@@ -91,13 +93,21 @@ class AutoScheduler:
             f"启动定时任务调度器，自动分析时间：{self.config_manager.get_auto_analysis_time()}"
         )
 
-        self.scheduler_task = asyncio.create_task(self._scheduler_loop())
+        self.scheduler_task = asyncio.create_task(
+            self._scheduler_loop(),
+            name="matrix-daily-analysis-scheduler",
+        )
 
     async def stop_scheduler(self):
         """停止定时任务调度器"""
         if self.scheduler_task and not self.scheduler_task.done():
             self.scheduler_task.cancel()
+            try:
+                await self.scheduler_task
+            except asyncio.CancelledError:
+                pass
             logger.info("已停止定时任务调度器")
+        self.scheduler_task = None
 
     async def restart_scheduler(self):
         """重启定时任务调度器"""
@@ -152,6 +162,9 @@ class AutoScheduler:
                 logger.error(f"定时任务调度器错误：{e}")
                 # 等待 5 分钟后重试
                 await asyncio.sleep(300)
+            except asyncio.CancelledError:
+                logger.debug("定时任务调度器已取消")
+                raise
 
     async def _run_auto_analysis(self):
         """执行自动分析 - 并发处理所有群聊"""

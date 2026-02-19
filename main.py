@@ -32,7 +32,7 @@ from .src.utils.helpers import MessageAnalyzer
     "astrbot_plugin_matrix_daily_analysis",
     "stevessr",
     "matrix 群日常分析总结插件 - 生成精美的群聊分析报告，支持话题分析、用户形象、群聊圣经等功能",
-    "v0.0.1",
+    "v0.0.2",
     "https://github.com/stevessr/astrbot_plugin_matrix_daily_analysis",
 )
 class matrixGroupDailyAnalysis(Star):
@@ -63,13 +63,14 @@ class matrixGroupDailyAnalysis(Star):
             self.retry_manager,
             self.html_render,
         )
+        self._delayed_start_task: asyncio.Task | None = None
 
         # 初始化命令处理器
         self._init_handlers()
 
         # 延迟启动自动调度器，给系统时间初始化
         if self.config_manager.get_enable_auto_analysis():
-            asyncio.create_task(self._delayed_start_scheduler())
+            self._ensure_delayed_start_scheduler_task()
 
         logger.info("matrix 群日常分析插件已初始化（模块化版本）")
 
@@ -118,8 +119,22 @@ class matrixGroupDailyAnalysis(Star):
                 self.retry_manager,
                 self.html_render,
             )
+        if (
+            self.config_manager
+            and self.config_manager.get_enable_auto_analysis()
+            and (self._delayed_start_task is None or self._delayed_start_task.done())
+        ):
+            self._ensure_delayed_start_scheduler_task()
         # 重新初始化命令处理器
         self._init_handlers()
+
+    def _ensure_delayed_start_scheduler_task(self) -> None:
+        if self._delayed_start_task and not self._delayed_start_task.done():
+            return
+        self._delayed_start_task = asyncio.create_task(
+            self._delayed_start_scheduler(),
+            name="matrix-daily-analysis-delayed-start",
+        )
 
     async def _delayed_start_scheduler(self):
         """延迟启动调度器，给系统时间初始化"""
@@ -147,6 +162,9 @@ class matrixGroupDailyAnalysis(Star):
             # 始终启动重试管理器，确保手动触发也能使用重试队列
             await self.retry_manager.start()
 
+        except asyncio.CancelledError:
+            logger.debug("延迟启动调度器任务已取消")
+            raise
         except Exception as e:
             logger.debug(f"延迟启动调度器失败，可能由于短时间内多次更新插件配置：{e}")
 
@@ -154,6 +172,14 @@ class matrixGroupDailyAnalysis(Star):
         """插件被卸载/停用时调用，清理资源"""
         try:
             logger.info("开始清理 matrix 群日常分析插件资源...")
+
+            if self._delayed_start_task and not self._delayed_start_task.done():
+                self._delayed_start_task.cancel()
+                try:
+                    await self._delayed_start_task
+                except asyncio.CancelledError:
+                    pass
+            self._delayed_start_task = None
 
             # 停止自动调度器
             if self.auto_scheduler:

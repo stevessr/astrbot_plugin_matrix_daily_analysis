@@ -42,6 +42,7 @@ class RetryManager:
         self.queue = asyncio.Queue()
         self.running = False
         self.worker_task = None
+        self._requeue_tasks: set[asyncio.Task] = set()
         self._dlq = []  # 死信队列 (Failures)
 
     async def start(self):
@@ -61,6 +62,13 @@ class RetryManager:
                 await self.worker_task
             except asyncio.CancelledError:
                 pass
+
+        pending_requeue_tasks = [task for task in self._requeue_tasks if not task.done()]
+        for task in pending_requeue_tasks:
+            task.cancel()
+        if pending_requeue_tasks:
+            await asyncio.gather(*pending_requeue_tasks, return_exceptions=True)
+        self._requeue_tasks.clear()
 
         # 检查剩余任务
         pending_count = self.queue.qsize()
@@ -116,7 +124,7 @@ class RetryManager:
                         logger.warning(
                             f"[RetryManager] 群 {task.group_id} 重试失败，{delay}秒后再次尝试"
                         )
-                        asyncio.create_task(self._requeue_after_delay(task, delay))
+                        self._schedule_requeue_after_delay(task, delay)
                         self.queue.task_done()
                     else:
                         logger.error(
@@ -134,9 +142,25 @@ class RetryManager:
                 logger.error(f"[RetryManager] Worker 异常：{e}", exc_info=True)
                 await asyncio.sleep(1)
 
+    def _schedule_requeue_after_delay(self, task: RetryTask, delay: float) -> None:
+        if not self.running:
+            return
+        requeue_task = asyncio.create_task(
+            self._requeue_after_delay(task, delay),
+            name=f"retry-requeue-{task.group_id}",
+        )
+        self._requeue_tasks.add(requeue_task)
+        requeue_task.add_done_callback(self._requeue_tasks.discard)
+
     async def _requeue_after_delay(self, task: RetryTask, delay: float):
-        await asyncio.sleep(delay)
-        await self.queue.put(task)
+        try:
+            await asyncio.sleep(delay)
+            if not self.running:
+                return
+            await self.queue.put(task)
+        except asyncio.CancelledError:
+            logger.debug(f"[RetryManager] 群 {task.group_id} 延迟重试任务已取消")
+            raise
 
     async def _process_task(self, task: RetryTask) -> bool:
         """执行具体的渲染和发送逻辑"""
