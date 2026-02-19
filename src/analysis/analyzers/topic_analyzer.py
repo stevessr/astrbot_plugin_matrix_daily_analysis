@@ -61,6 +61,9 @@ class TopicAnalyzer(BaseAnalyzer):
             return ""
 
         # 提取文本消息
+        bot_matrix_id_set = {
+            str(matrix) for matrix in self.config_manager.get_bot_matrix_ids() if matrix
+        }
         text_messages = []
         for i, msg in enumerate(messages):
             # 确保 msg 是字典类型，避免'str' object has no attribute 'get'错误
@@ -75,12 +78,9 @@ class TopicAnalyzer(BaseAnalyzer):
 
                 # 获取发送者 ID 并过滤机器人消息
                 user_id = str(sender.get("user_id", ""))
-                bot_matrix_ids = self.config_manager.get_bot_matrix_ids()
 
                 # 跳过机器人自己的消息
-                if bot_matrix_ids and user_id in [
-                    str(matrix) for matrix in bot_matrix_ids
-                ]:
+                if bot_matrix_id_set and user_id in bot_matrix_id_set:
                     continue
 
                 nickname = InfoUtils.get_user_nickname(self.config_manager, sender)
@@ -281,6 +281,9 @@ class TopicAnalyzer(BaseAnalyzer):
             return []
 
         text_messages = []
+        bot_matrix_id_set = {
+            str(matrix) for matrix in self.config_manager.get_bot_matrix_ids() if matrix
+        }
 
         for i, msg in enumerate(messages):
             logger.debug(f"处理第 {i + 1} 条消息，类型：{type(msg)}")
@@ -300,12 +303,9 @@ class TopicAnalyzer(BaseAnalyzer):
 
                 # 获取发送者 ID 并过滤机器人消息
                 user_id = str(sender.get("user_id", ""))
-                bot_matrix_ids = self.config_manager.get_bot_matrix_ids()
 
                 # 跳过机器人自己的消息
-                if bot_matrix_ids and user_id in [
-                    str(matrix) for matrix in bot_matrix_ids
-                ]:
+                if bot_matrix_id_set and user_id in bot_matrix_id_set:
                     logger.debug(
                         f"extract_text_messages 过滤掉机器人 matrix 号：{user_id}"
                     )

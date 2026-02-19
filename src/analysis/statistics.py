@@ -19,6 +19,7 @@ class UserAnalyzer:
         """分析用户活跃度"""
         # 获取机器人 matrix 号列表用于过滤
         bot_matrix_ids = self.config_manager.get_bot_matrix_ids()
+        bot_matrix_id_set = {str(matrix) for matrix in bot_matrix_ids if matrix}
 
         user_stats = defaultdict(
             lambda: {
@@ -40,7 +41,7 @@ class UserAnalyzer:
             user_id = str(sender.get("user_id", ""))
 
             # 跳过机器人自己的消息，避免进入统计
-            if bot_matrix_ids and user_id in [str(matrix) for matrix in bot_matrix_ids]:
+            if bot_matrix_id_set and user_id in bot_matrix_id_set:
                 continue
 
             nickname = InfoUtils.get_user_nickname(self.config_manager, sender)
@@ -94,13 +95,12 @@ class UserAnalyzer:
         """获取最活跃的用户"""
         # 获取机器人 matrix 号列表用于过滤
         bot_matrix_ids = self.config_manager.get_bot_matrix_ids()
+        bot_matrix_id_set = {str(matrix) for matrix in bot_matrix_ids if matrix}
 
         users = []
         for user_id, stats in user_analysis.items():
             # 过滤机器人自己
-            if bot_matrix_ids and str(user_id) in [
-                str(matrix) for matrix in bot_matrix_ids
-            ]:
+            if bot_matrix_id_set and str(user_id) in bot_matrix_id_set:
                 continue
 
             users.append(
