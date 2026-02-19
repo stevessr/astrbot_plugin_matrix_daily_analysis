@@ -36,7 +36,12 @@ class PersonalReportHandler:
             # 提取用户消息内容用于 LLM 分析
             message_texts = []
             for msg in messages[:max_messages]:
-                for content in msg.get("message", []):
+                message_items = msg.get("message", [])
+                if not isinstance(message_items, list):
+                    continue
+                for content in message_items:
+                    if not isinstance(content, dict):
+                        continue
                     if content.get("type") == "text":
                         text = content.get("data", {}).get("text", "").strip()
                         if text:
