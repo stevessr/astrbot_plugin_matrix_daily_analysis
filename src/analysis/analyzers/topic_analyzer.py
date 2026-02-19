@@ -97,20 +97,23 @@ class TopicAnalyzer(BaseAnalyzer):
                         continue
 
                     content_type = content.get("type", "")
+                    content_data = content.get("data", {})
+                    if not isinstance(content_data, dict):
+                        content_data = {}
 
                     if content_type == "text":
-                        text = content.get("data", {}).get("text", "").strip()
+                        text = str(content_data.get("text", "") or "").strip()
                         if text:
                             text_parts.append(text)
                     elif content_type == "at":
                         # 处理 @ 消息，转换为文本
-                        at_matrix = content.get("data", {}).get("matrix", "")
+                        at_matrix = str(content_data.get("matrix", "") or "").strip()
                         if at_matrix:
                             at_text = f"@{at_matrix}"
                             text_parts.append(at_text)
                     elif content_type == "reply":
                         # 处理回复消息，添加标记
-                        reply_id = content.get("data", {}).get("id", "")
+                        reply_id = str(content_data.get("id", "") or "").strip()
                         if reply_id:
                             reply_text = f"[回复:{reply_id}]"
                             text_parts.append(reply_text)
@@ -318,7 +321,10 @@ class TopicAnalyzer(BaseAnalyzer):
                     if not isinstance(content, dict):
                         continue
                     if content.get("type") == "text":
-                        text = content.get("data", {}).get("text", "").strip()
+                        content_data = content.get("data", {})
+                        if not isinstance(content_data, dict):
+                            content_data = {}
+                        text = str(content_data.get("text", "") or "").strip()
                         if text and len(text) > 2 and not text.startswith("/"):
                             # 清理消息内容
                             text = text.replace("“", '"').replace("”", '"')

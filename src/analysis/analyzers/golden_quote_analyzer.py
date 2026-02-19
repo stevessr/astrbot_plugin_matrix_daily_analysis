@@ -154,7 +154,10 @@ class GoldenQuoteAnalyzer(BaseAnalyzer):
                     if not isinstance(content, dict):
                         continue
                     if content.get("type") == "text":
-                        text = content.get("data", {}).get("text", "").strip()
+                        data = content.get("data", {})
+                        if not isinstance(data, dict):
+                            data = {}
+                        text = str(data.get("text", "") or "").strip()
                         # 过滤长度适中、可能圣经的消息
                         if 5 <= len(text) <= 100 and not text.startswith(
                             ("http", "www", "/")
