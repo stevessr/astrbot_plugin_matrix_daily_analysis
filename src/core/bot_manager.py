@@ -152,12 +152,15 @@ class BotManager:
                 continue
 
             platform_name, platform_id = self._extract_platform_meta(platform)
-            # matrix_daily_analysis 仅支持 Matrix
+            normalized_platform_id = str(platform_id or "matrix")
             normalized_platform_name = str(platform_name or "").strip().lower()
+            # matrix_daily_analysis 仅支持 Matrix
             if normalized_platform_name and normalized_platform_name != "matrix":
+                if not self.is_matrix_platform_id(normalized_platform_id):
+                    continue
+            elif not self.is_matrix_platform_id(normalized_platform_id):
                 continue
 
-            normalized_platform_id = str(platform_id or "matrix")
             self.set_bot_instance(bot_client, normalized_platform_id)
             discovered_platforms[normalized_platform_id] = platform
             discovered[normalized_platform_id] = bot_client
@@ -193,26 +196,57 @@ class BotManager:
             "ready_for_auto_analysis": self.is_ready_for_auto_analysis(),
         }
 
+    def resolve_event_platform_id(self, event) -> str | None:
+        """解析事件所属的平台 ID（仅返回 Matrix 平台）。"""
+        if event is None:
+            return None
+
+        candidates: list[str] = []
+
+        try:
+            if hasattr(event, "get_platform_id"):
+                candidate = str(event.get_platform_id() or "").strip()
+                if candidate:
+                    candidates.append(candidate)
+        except Exception:
+            pass
+
+        if hasattr(event, "platform") and isinstance(event.platform, str):
+            candidate = str(event.platform or "").strip()
+            if candidate and candidate not in candidates:
+                candidates.append(candidate)
+
+        metadata = getattr(event, "metadata", None)
+        metadata_id = str(getattr(metadata, "id", "") or "").strip()
+        if metadata_id and metadata_id not in candidates:
+            candidates.append(metadata_id)
+
+        for candidate in candidates:
+            if self.is_matrix_platform_id(candidate):
+                return candidate
+
+        platform_name = ""
+        try:
+            if hasattr(event, "get_platform_name"):
+                platform_name = str(event.get_platform_name() or "").strip().lower()
+        except Exception:
+            platform_name = ""
+
+        if platform_name == "matrix":
+            return candidates[0] if candidates else "matrix"
+        return None
+
+    def is_matrix_event(self, event) -> bool:
+        """检查事件是否来自 Matrix 平台。"""
+        return self.resolve_event_platform_id(event) is not None
+
     def update_from_event(self, event):
         """从事件更新 bot 实例（用于手动命令）"""
-        # 只支持 Matrix
-        platform_name = None
-        if hasattr(event, "get_platform_name"):
-            platform_name = str(event.get_platform_name() or "").strip().lower()
-
-        if platform_name != "matrix":
+        platform_id = self.resolve_event_platform_id(event)
+        if not platform_id:
             return False
 
         if hasattr(event, "bot") and event.bot:
-            # 从事件中获取平台 ID
-            platform_id = None
-            if hasattr(event, "get_platform_id"):
-                platform_id = str(event.get_platform_id() or "") or None
-            elif hasattr(event, "platform") and isinstance(event.platform, str):
-                platform_id = str(event.platform or "") or None
-            elif hasattr(event, "metadata") and hasattr(event.metadata, "id"):
-                platform_id = str(event.metadata.id or "") or None
-
             self.set_bot_instance(event.bot, platform_id)
             # 每次都尝试从 bot 实例提取用户 ID
             bot_id = self._extract_bot_matrix_id(event.bot)
@@ -224,11 +258,9 @@ class BotManager:
                 if config_ids:
                     self.set_bot_matrix_ids(config_ids)
             return True
+
         if hasattr(event, "client") and event.client:
-            platform_id = None
-            if hasattr(event, "get_platform_id"):
-                platform_id = str(event.get_platform_id() or "") or None
-            self.set_bot_instance(event.client, platform_id or "matrix")
+            self.set_bot_instance(event.client, platform_id)
             bot_id = self._extract_bot_matrix_id(event.client)
             if bot_id:
                 self._add_bot_matrix_id(bot_id)
@@ -237,6 +269,7 @@ class BotManager:
                 if config_ids:
                     self.set_bot_matrix_ids(config_ids)
             return True
+
         return False
 
     def _extract_bot_matrix_id(self, bot_instance):

@@ -69,15 +69,6 @@ class AutoScheduler:
             return None
         return parsed.replace(year=now.year, month=now.month, day=now.day)
 
-    def _is_matrix_platform_id(self, platform_id: str) -> bool:
-        checker = getattr(self.bot_manager, "is_matrix_platform_id", None)
-        if callable(checker):
-            try:
-                return bool(checker(platform_id))
-            except Exception:
-                return False
-        return str(platform_id or "").strip() == "matrix"
-
     async def get_platform_id_for_group(self, group_id):
         """根据群 ID 获取对应的平台 ID"""
         try:
@@ -93,7 +84,7 @@ class AutoScheduler:
                 matrix_platform_ids = [
                     platform_id
                     for platform_id in self.bot_manager._bot_instances.keys()
-                    if self._is_matrix_platform_id(platform_id)
+                    if self.bot_manager.is_matrix_platform_id(platform_id)
                 ]
                 if len(matrix_platform_ids) == 1:
                     selected = matrix_platform_ids[0]
@@ -108,7 +99,7 @@ class AutoScheduler:
                 # 如果只有一个实例，直接返回（保底）
                 if len(self.bot_manager._bot_instances) == 1:
                     platform_id = list(self.bot_manager._bot_instances.keys())[0]
-                    if not self._is_matrix_platform_id(platform_id):
+                    if not self.bot_manager.is_matrix_platform_id(platform_id):
                         logger.error(f"❌ 唯一可用适配器不是 Matrix：{platform_id}")
                         return None
                     logger.debug(f"只有一个适配器，使用平台：{platform_id}")
@@ -371,7 +362,7 @@ class AutoScheduler:
                     )
 
                     for test_platform_id, test_bot_instance in available_platforms:
-                        if not self._is_matrix_platform_id(test_platform_id):
+                        if not self.bot_manager.is_matrix_platform_id(test_platform_id):
                             continue
                         # 检查该平台是否启用了此插件
                         if not self.bot_manager.is_plugin_enabled(
@@ -504,7 +495,7 @@ class AutoScheduler:
                 continue
 
             # Only support Matrix
-            if not self._is_matrix_platform_id(platform_id):
+            if not self.bot_manager.is_matrix_platform_id(platform_id):
                 continue
 
             try:
@@ -545,7 +536,7 @@ class AutoScheduler:
                     return None
 
                 # Check if it's Matrix
-                if self._is_matrix_platform_id(platform_id):
+                if self.bot_manager.is_matrix_platform_id(platform_id):
                     try:
                         # Assuming user_id is MXID
                         bot_instance = self.bot_manager.get_bot_instance(platform_id)
@@ -928,7 +919,7 @@ class AutoScheduler:
         clients = []
         seen_client_ids: set[int] = set()
         for platform_id, bot_instance in available_platforms:
-            if not self._is_matrix_platform_id(platform_id) or bot_instance is None:
+            if not self.bot_manager.is_matrix_platform_id(platform_id) or bot_instance is None:
                 continue
             if hasattr(
                 self.bot_manager, "is_plugin_enabled"

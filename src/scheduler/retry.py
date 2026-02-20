@@ -65,15 +65,6 @@ class RetryManager:
         except Exception as e:
             logger.error(f"[RetryManager] 延迟重试任务异常退出：{e}", exc_info=True)
 
-    def _is_matrix_platform_id(self, platform_id: str) -> bool:
-        checker = getattr(self.bot_manager, "is_matrix_platform_id", None)
-        if callable(checker):
-            try:
-                return bool(checker(platform_id))
-            except Exception:
-                return False
-        return str(platform_id or "").strip() == "matrix"
-
     def _resolve_retry_bot_instance(
         self, platform_id: str
     ) -> tuple[str | None, object | None]:
@@ -85,7 +76,7 @@ class RetryManager:
                 plugin_enabled = self.bot_manager.is_plugin_enabled(
                     normalized, "astrbot_plugin_matrix_daily_analysis"
                 )
-            if bot and self._is_matrix_platform_id(normalized) and plugin_enabled:
+            if bot and self.bot_manager.is_matrix_platform_id(normalized) and plugin_enabled:
                 return normalized, bot
 
         bot_instances = getattr(self.bot_manager, "_bot_instances", {})
@@ -99,7 +90,7 @@ class RetryManager:
                     )
                 if (
                     bot
-                    and self._is_matrix_platform_id(fallback_platform_id)
+                    and self.bot_manager.is_matrix_platform_id(fallback_platform_id)
                     and plugin_enabled
                 ):
                     return str(fallback_platform_id), bot
