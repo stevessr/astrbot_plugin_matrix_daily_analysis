@@ -203,7 +203,14 @@ class ReportGenerator:
         max_golden_quotes = self.config_manager.get_max_golden_quotes()
         for i, quote in enumerate(stats.golden_quotes[:max_golden_quotes], 1):
             report += f'{i}. "{quote.content}" —— {quote.sender}\n'
-            report += f"   {quote.reason}\n\n"
+            report += f"   {quote.reason}\n"
+            event_id = str(getattr(quote, "event_id", "") or "")
+            thread_root_id = str(getattr(quote, "thread_root_id", "") or "")
+            if event_id:
+                report += f"   event: {event_id}\n"
+            if thread_root_id:
+                report += f"   thread: {thread_root_id}\n"
+            report += "\n"
 
         return report
 
@@ -266,6 +273,10 @@ class ReportGenerator:
                     "sender": quote.sender,
                     "reason": quote.reason,
                     "avatar_url": avatar_url,
+                    "event_id": str(getattr(quote, "event_id", "") or ""),
+                    "relation_type": str(getattr(quote, "relation_type", "") or ""),
+                    "thread_root_id": str(getattr(quote, "thread_root_id", "") or ""),
+                    "reply_event_id": str(getattr(quote, "reply_event_id", "") or ""),
                 }
             )
 

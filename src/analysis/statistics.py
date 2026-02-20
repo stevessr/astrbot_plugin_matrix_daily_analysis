@@ -29,6 +29,7 @@ class UserAnalyzer:
                 "nickname": "",
                 "hours": defaultdict(int),
                 "reply_count": 0,
+                "thread_message_count": 0,
             }
         )
 
@@ -48,6 +49,15 @@ class UserAnalyzer:
 
             user_stats[user_id]["message_count"] += 1
             user_stats[user_id]["nickname"] = nickname
+
+            # 使用标准化字段补充回复计数（适配非文本消息中的 reply 语义）
+            if str(msg.get("reply_event_id", "") or "").strip():
+                user_stats[user_id]["reply_count"] += 1
+
+            relation_type = str(msg.get("relation_type", "") or "").strip().lower()
+            thread_root_id = str(msg.get("thread_root_id", "") or "").strip()
+            if relation_type == "m.thread" and thread_root_id:
+                user_stats[user_id]["thread_message_count"] += 1
 
             # 统计时间分布
             hour = get_hour_from_timestamp(msg.get("time", 0))
@@ -85,7 +95,9 @@ class UserAnalyzer:
                         # 动画表情（以 image 形式发送）
                         user_stats[user_id]["emoji_count"] += 1
                 elif content.get("type") == "reply":
-                    user_stats[user_id]["reply_count"] += 1
+                    # 兼容旧数据：若无标准化字段，则退回 message 列表中的 reply 计数
+                    if not str(msg.get("reply_event_id", "") or "").strip():
+                        user_stats[user_id]["reply_count"] += 1
 
         return dict(user_stats)
 
@@ -111,6 +123,7 @@ class UserAnalyzer:
                     "char_count": stats["char_count"],
                     "emoji_count": stats["emoji_count"],
                     "reply_count": stats["reply_count"],
+                    "thread_message_count": stats.get("thread_message_count", 0),
                 }
             )
 

@@ -10,6 +10,8 @@
         <div style="text-align: right; font-size: 0.7em; color: #888;">
             入选理由：{{ quote.reason }}
         </div>
+        {% if quote.event_id %}<div style="text-align: right; font-size: 0.65em; color: #999;">event: {{ quote.event_id }}</div>{% endif %}
+        {% if quote.thread_root_id %}<div style="text-align: right; font-size: 0.65em; color: #999;">thread: {{ quote.thread_root_id }}</div>{% endif %}
     </div>
     {% endfor %}
 </div>

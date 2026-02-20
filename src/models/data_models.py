@@ -34,6 +34,10 @@ class GoldenQuote:
     sender: str
     reason: str
     matrix: str = ""
+    event_id: str = ""
+    relation_type: str = ""
+    thread_root_id: str = ""
+    reply_event_id: str = ""
 
 
 @dataclass

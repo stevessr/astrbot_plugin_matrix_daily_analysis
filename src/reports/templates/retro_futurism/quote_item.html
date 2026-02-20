@@ -11,6 +11,8 @@
         <p class="quote-content">{{ quote.content }}</p>
         <div class="quote-author">— {{ quote.sender }}</div>
         <p class="quote-note">{{ quote.reason }}</p>
+        {% if quote.event_id %}<p class="quote-note">event: {{ quote.event_id }}</p>{% endif %}
+        {% if quote.thread_root_id %}<p class="quote-note">thread: {{ quote.thread_root_id }}</p>{% endif %}
     </div>
 </article>
 {% endfor %}

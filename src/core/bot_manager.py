@@ -289,6 +289,22 @@ class BotManager:
 
         return None
 
+    def is_matrix_platform_id(self, platform_id: str) -> bool:
+        """检查平台 ID 是否对应 Matrix 平台。"""
+        normalized = str(platform_id or "").strip()
+        if not normalized:
+            return False
+        if normalized == "matrix":
+            return True
+
+        platform = self.get_platform(platform_id=normalized)
+        if platform is None:
+            # 对于已注册但未缓存的平台，按当前插件定位保守判断
+            return normalized in self._bot_instances
+
+        platform_name, _ = self._extract_platform_meta(platform)
+        return str(platform_name or "").strip().lower() == "matrix"
+
     def is_plugin_enabled(self, platform_id: str, plugin_name: str) -> bool:
         """检查指定平台是否启用了该插件"""
         if platform_id not in self._platforms:

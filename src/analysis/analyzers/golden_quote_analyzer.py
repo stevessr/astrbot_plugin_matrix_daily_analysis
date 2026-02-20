@@ -174,6 +174,10 @@ class GoldenQuoteAnalyzer(BaseAnalyzer):
                                     "time": msg_time,
                                     "content": text,
                                     "matrix": str(sender.get("user_id", "")),
+                                    "event_id": str(msg.get("event_id", "") or ""),
+                                    "relation_type": str(msg.get("relation_type", "") or ""),
+                                    "thread_root_id": str(msg.get("thread_root_id", "") or ""),
+                                    "reply_event_id": str(msg.get("reply_event_id", "") or ""),
                                 }
                             )
 
@@ -217,6 +221,10 @@ class GoldenQuoteAnalyzer(BaseAnalyzer):
                         or msg["content"] in quote.content
                     ) and quote.sender == msg["sender"]:
                         quote.matrix = str(msg.get("matrix", ""))
+                        quote.event_id = str(msg.get("event_id", ""))
+                        quote.relation_type = str(msg.get("relation_type", ""))
+                        quote.thread_root_id = str(msg.get("thread_root_id", ""))
+                        quote.reply_event_id = str(msg.get("reply_event_id", ""))
                         break
 
             return quotes, usage

@@ -27,6 +27,8 @@
                     <span class="note-label">🤣👉 AI 锐评：</span>
                     {{ quote.reason }}
                 </div>
+                {% if quote.event_id %}<div class="q-analysis-note">event: {{ quote.event_id }}</div>{% endif %}
+                {% if quote.thread_root_id %}<div class="q-analysis-note">thread: {{ quote.thread_root_id }}</div>{% endif %}
             </div>
         </div>
     </div>

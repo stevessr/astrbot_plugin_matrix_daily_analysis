@@ -6,6 +6,8 @@
         <div class="quote-content">"{{ quote.content }}"</div>
         <div class="quote-author">—— {{ quote.sender }}</div>
         <div class="quote-reason">{{ quote.reason }}</div>
+        {% if quote.event_id %}<div class="quote-reason">event: {{ quote.event_id }}</div>{% endif %}
+        {% if quote.thread_root_id %}<div class="quote-reason">thread: {{ quote.thread_root_id }}</div>{% endif %}
     </div>
     {% endfor %}
 </div>

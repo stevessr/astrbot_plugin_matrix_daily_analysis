@@ -70,22 +70,13 @@ class AutoScheduler:
         return parsed.replace(year=now.year, month=now.month, day=now.day)
 
     def _is_matrix_platform_id(self, platform_id: str) -> bool:
-        normalized_platform_id = str(platform_id or "").strip()
-        if not normalized_platform_id:
-            return False
-        if normalized_platform_id == "matrix":
-            return True
-        get_platform = getattr(self.bot_manager, "get_platform", None)
-        if not callable(get_platform):
-            return False
-        platform = get_platform(platform_id=normalized_platform_id)
-        if platform is None:
-            return False
-        try:
-            meta = platform.meta()
-            return str(getattr(meta, "name", "") or "").strip().lower() == "matrix"
-        except Exception:
-            return False
+        checker = getattr(self.bot_manager, "is_matrix_platform_id", None)
+        if callable(checker):
+            try:
+                return bool(checker(platform_id))
+            except Exception:
+                return False
+        return str(platform_id or "").strip() == "matrix"
 
     async def get_platform_id_for_group(self, group_id):
         """根据群 ID 获取对应的平台 ID"""

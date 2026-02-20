@@ -66,22 +66,13 @@ class RetryManager:
             logger.error(f"[RetryManager] 延迟重试任务异常退出：{e}", exc_info=True)
 
     def _is_matrix_platform_id(self, platform_id: str) -> bool:
-        normalized = str(platform_id or "").strip()
-        if not normalized:
-            return False
-        if normalized == "matrix":
-            return True
-        get_platform = getattr(self.bot_manager, "get_platform", None)
-        if not callable(get_platform):
-            return False
-        platform = get_platform(platform_id=normalized)
-        if platform is None:
-            return False
-        try:
-            meta = platform.meta()
-            return str(getattr(meta, "name", "") or "").strip().lower() == "matrix"
-        except Exception:
-            return False
+        checker = getattr(self.bot_manager, "is_matrix_platform_id", None)
+        if callable(checker):
+            try:
+                return bool(checker(platform_id))
+            except Exception:
+                return False
+        return str(platform_id or "").strip() == "matrix"
 
     def _resolve_retry_bot_instance(
         self, platform_id: str

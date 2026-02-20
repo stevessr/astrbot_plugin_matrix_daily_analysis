@@ -218,6 +218,7 @@ class MessageHandler:
                             "event_id": event_id,
                             "relation_type": relation_type,
                             "thread_root_id": thread_root_id,
+                            "reply_event_id": reply_event_id,
                         }
 
                         msg_type = content.get("msgtype")
@@ -228,13 +229,6 @@ class MessageHandler:
                                     "data": {"text": content.get("body", "")},
                                 }
                             )
-                            if reply_event_id:
-                                msg_dict["message"].append(
-                                    {
-                                        "type": "reply",
-                                        "data": {"id": reply_event_id},
-                                    }
-                                )
                         elif msg_type == "m.image":
                             msg_dict["message"].append(
                                 {
@@ -250,6 +244,14 @@ class MessageHandler:
                                     "data": {
                                         "text": f"[{msg_type}] {content.get('body', '')}"
                                     },
+                                }
+                            )
+
+                        if reply_event_id:
+                            msg_dict["message"].append(
+                                {
+                                    "type": "reply",
+                                    "data": {"id": reply_event_id},
                                 }
                             )
 
